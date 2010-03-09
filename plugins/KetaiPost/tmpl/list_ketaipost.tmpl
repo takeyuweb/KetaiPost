@@ -1,0 +1,52 @@
+<mt:setVarBlock name="page_title">KetaiPost 受信設定</mt:setVarBlock>
+<mt:include name="include/header.tmpl" />
+
+<h2>送信先メールアドレス（メールボックス）</h2>
+
+<ul class="action-link-list last-child">
+  <li class="first-child last-child"><a class="icon-left icon-create mt-open-dialog first-child last-child" href="/mt/mt.cgi?__mode=edit_ketaipost_mailbox&return_args=__mode%3Dlist_ketaipost%26blog_id%3D0">新しい送信先メールアドレスを登録（メールボックス設定）</a></li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th id="at-email">送信先メールアドレス</th>
+      <th id="at-blog">ブログ</th>
+    </tr>
+  </thead>
+  <tbody>
+    <mt:loop name="mailboxes">
+    <tr>
+      <td><a class="mt-open-dialog" href="/mt/mt.cgi?id=<mt:var name="id" />&__mode=edit_ketaipost_mailbox&return_args=__mode%3Dlist_ketaipost%26blog_id%3D0"><mt:var name="address" encode_html="1" /></a></td>
+      <td><mt:var name="blog" encode_html="1" /></td>
+    </tr>
+    </mt:loop>
+  </tbody>
+</table>
+
+<h2>送信元ユーザー（記事の作成者）</h2>
+<ul class="action-link-list last-child">
+  <li class="first-child last-child"><a class="icon-left icon-create mt-open-dialog first-child last-child" href="/mt/mt.cgi?__mode=edit_ketaipost_author&return_args=__mode%3Dlist_ketaipost%26blog_id%3D0">新しい送信元メールアドレスを登録（ユーザー設定）</a></li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th id="at-email">送信元メールアドレス</th>
+      <th id="at-author">ユーザー名</th>
+    </tr>
+  </thead>
+  <tbody>
+    <mt:loop name="authors">
+    <tr>
+      <td><a class="mt-open-dialog" href="/mt/mt.cgi?id=<mt:var name="id" />&__mode=edit_ketaipost_author&return_args=__mode%3Dlist_ketaipost%26blog_id%3D0">
+	  <mt:if name="address"><mt:var name="address" encode_html="1" /></mt:if>
+	  <mt:unless name="address">（未設定のすべてのメールアドレス）</mt:unless>
+      </a></td>
+      <td><mt:var name="author" encode_html="1" /></td>
+    </tr>
+    </mt:loop>
+  </tbody>
+</table>
+
+<mt:include name="include/footer.tmpl" />

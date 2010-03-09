@@ -1,0 +1,177 @@
+# KetaiPost (C) 2010 Yuichi Takeuchi
+# This program is distributed under the terms of the
+# GNU General Public License, version 2.
+#
+# $Id: CMS.pm $
+
+package KetaiPost::CMS;
+
+use strict;
+use warnings;
+use utf8;
+
+use MT::Blog;
+use MT::Author;
+use KetaiPost::MailBox;
+use KetaiPost::Author;
+
+# KetaiPostの設定データを一覧表示
+# ブログ管理画面のときは、そのブログに関することの設定だけが可能 (TODO)
+# いまのところシステム設定のみ
+sub list_ketaipost {
+    my $app = shift;
+    # my $blog_id = $app->param('blog_id');
+
+    my $mailboxes_iter = KetaiPost::MailBox->load_iter({}, {});
+    my $authors_iter = KetaiPost::Author->load_iter({}, {});
+
+    my @mailboxes;
+    my @authors;
+
+    while (my $obj = $mailboxes_iter->()) {
+	my $blog = MT::Blog->load($obj->blog_id);
+	my $ref_mailbox = {
+	    id => $obj->id,
+	    blog => $blog->name,
+	    address => $obj->address
+	};
+	push(@mailboxes, $ref_mailbox);
+    }
+
+    while (my $obj = $authors_iter->()) {
+	my $author = MT::Author->load($obj->author_id);
+	my $ref_author = {
+	    id => $obj->id,
+	    author => $author->name,
+	    address => $obj->address
+	};
+	push(@authors, $ref_author);
+    }
+
+    my $params = {
+	mailboxes => \@mailboxes,
+	authors => \@authors,
+    };
+
+    my $tmpl = $app->load_tmpl('list_ketaipost.tmpl');
+    
+    return $app->build_page($tmpl, $params);
+}
+
+# 送信先メールアドレス（メールボックス）の登録
+# KetaiPost::MailBox のIDが指定されていれば編集
+sub edit_ketaipost_mailbox {
+    my $app = shift;
+    my $id = $app->param('id');
+    my $mailbox;
+    $mailbox = KetaiPost::MailBox->load({ id => $id });
+    $mailbox = KetaiPost::MailBox->new unless $mailbox;
+
+    my @blogs;
+
+    my $blog_iter = MT::Blog->load_iter({}, {});
+    while (my $obj = $blog_iter->()) {
+	my $selected = $obj->id  == $mailbox->blog_id ? 1 : 0;
+	my $blog = {
+	    id => $obj->id,
+	    name => $obj->name,
+	    selected => $selected
+	};
+	push(@blogs, $blog);
+    }
+
+    my $params = {
+	id => $mailbox->id,
+	address => $mailbox->address,
+	account => $mailbox->account,
+	password => $mailbox->password,
+	host => $mailbox->host,
+	port => $mailbox->port || 110,
+	use_ssl => $mailbox->use_ssl,
+        blogs => \@blogs,
+	return_args => $app->param('return_args'),
+    };
+
+    return $app->load_tmpl('edit_ketaipost_mailbox.tmpl', $params);
+}
+
+# 送信先メールアドレス（メールボックス）の保存
+# KetaiPost::MailBox のIDが指定されていれば更新
+sub save_ketaipost_mailbox {
+    my $app = shift;
+    my $id = $app->param('id');
+    my $mailbox;
+    $mailbox = KetaiPost::MailBox->load($id) if $id > 0;
+    $mailbox = KetaiPost::MailBox->new unless $mailbox;
+
+    my $blog = MT::Blog->load({'id' => $app->param('blog_id')});
+    $mailbox->blog_id($blog->id) if $blog;
+    $mailbox->address($app->param('address'));
+    $mailbox->host($app->param('host'));
+    $mailbox->port($app->param('port'));
+    $mailbox->account($app->param('account'));
+    $mailbox->password($app->param('password'));
+    $mailbox->use_ssl($app->param('use_ssl'));
+
+    $mailbox->save or die "保存に失敗しました：", $mailbox->errstr;
+
+    my $params = {
+	return_uri => $app->return_uri,
+    };
+    return $app->load_tmpl('save_ketaipost_mailbox.tmpl', $params);
+}
+
+# 送信元メールアドレスとユーザーとの関連付け
+sub edit_ketaipost_author {
+    my $app = shift;
+    my $id = $app->param('id');
+    my $author;
+    $author = KetaiPost::Author->load({ id => $id });
+    $author = KetaiPost::Author->new unless $author;
+
+    my @authors;
+
+    my $author_iter = MT::Author->load_iter({}, {});
+    while (my $obj = $author_iter->()) {
+	my $selected = $obj->id  == $author->author_id ? 1 : 0;
+	my $author = {
+	    id => $obj->id,
+	    name => $obj->name,
+	    selected => $selected
+	};
+	push(@authors, $author);
+    }
+
+    my $params = {
+	id => $author->id,
+	address => $author->address,
+        authors => \@authors,
+	return_args => $app->param('return_args'),
+    };
+
+    return $app->load_tmpl('edit_ketaipost_author.tmpl', $params);
+}
+
+# 送信元メールアドレスの保存
+sub save_ketaipost_author {
+    my $app = shift;
+    my $id = $app->param('id');
+    my $author;
+    $author = KetaiPost::Author->load($id) if $id > 0;
+    $author = KetaiPost::Author->new unless $author;
+
+    my $obj = MT::Author->load({'id' => $app->param('author_id')});
+    $author->author_id($obj->id) if $obj;
+    $author->address($app->param('address'));
+
+    $author->save or die "保存に失敗しました：", $author->errstr;
+
+    my $params = {
+	return_uri => $app->return_uri,
+    };
+    return $app->load_tmpl('save_ketaipost_author.tmpl', $params);
+}
+
+
+1;
+

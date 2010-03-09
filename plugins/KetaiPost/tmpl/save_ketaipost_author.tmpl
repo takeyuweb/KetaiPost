@@ -1,0 +1,12 @@
+<mt:include name="dialog/header.tmpl" page_title="送信元メールアドレス登録" />
+
+<p class="first-child last-child">登録しました。</p>
+
+<mt:include name="dialog/footer.tmpl" />
+
+<script type="text/javascript">
+  $(document).ready(function(){
+    parent.location.href = "<mt:var name="return_uri" />";
+    // parent.jQuery.fn.mtDialog.close();
+  });
+</script>

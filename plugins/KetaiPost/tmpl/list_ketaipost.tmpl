@@ -1,4 +1,20 @@
-<mt:setVarBlock name="page_title">KetaiPost 受信設定</mt:setVarBlock>
+<mt:setVars>
+  page_title=KetaiPost 受信設定
+  listing_screen=1
+</mt:setVars>
+<mt:setVarBlock name="jq_js_include">
+  jQuery.mtCheckbox();
+  jQuery('button.mt-delete-mailboxes').mtDeleteItems({
+    id: 'mailbox-listing-form',
+    singular: '送信先メールアドレス',
+    plural: '送信先メールアドレス'
+  });
+  jQuery('button.mt-delete-authors').mtDeleteItems({
+    id: 'author-listing-form',
+    singular: '送信元ユーザー',
+    plural: '送信元ユーザー'
+  });
+</mt:setVarBlock>
 <mt:include name="include/header.tmpl" />
 
 <h2>送信先メールアドレス（メールボックス）</h2>
@@ -7,46 +23,98 @@
   <li class="first-child last-child"><a class="icon-left icon-create mt-open-dialog first-child last-child" href="/mt/mt.cgi?__mode=edit_ketaipost_mailbox&return_args=__mode%3Dlist_ketaipost%26blog_id%3D0">新しい送信先メールアドレスを登録（メールボックス設定）</a></li>
 </ul>
 
-<table>
-  <thead>
-    <tr>
-      <th id="at-email">送信先メールアドレス</th>
-      <th id="at-blog">ブログ</th>
-    </tr>
-  </thead>
-  <tbody>
-    <mt:loop name="mailboxes">
-    <tr>
-      <td><a class="mt-open-dialog" href="/mt/mt.cgi?id=<mt:var name="id" />&__mode=edit_ketaipost_mailbox&return_args=__mode%3Dlist_ketaipost%26blog_id%3D0"><mt:var name="address" encode_html="1" /></a></td>
-      <td><mt:var name="blog" encode_html="1" /></td>
-    </tr>
-    </mt:loop>
-  </tbody>
-</table>
+<div class="listing">
+  <form method="post" action="<mt:var name="script_url" />" class="first-child last-child">
+    <input type="hidden" name="__mode" value="delete_ketaipost_mailbox" />
+    <input type="hidden" name="magic_token" value="<mt:var name="magic_token" />" />
+    <input type="hidden" name="return_args" value="<mt:var name="return_args" />" />
+    <div class="actions-bar actions-bar-top" id="actions-bar-top">
+      <span class="button-actions actions">
+	<button class="mt-delete-mailboxes first-child" title="選択した送信先を削除" type="submit">削除</button>
+      </span>
+    </div>
+    <table id="mailbox-listing-form">
+      <thead>
+	<tr>
+	  <th class="cb first-child"><input type="checkbox" class="select first-child last-child checkbox" value="all" name="id-head"></th>
+	  <th id="at-email" class="primary-col">送信先メールアドレス</th>
+	  <th id="at-blog" class="last-child">ブログ</th>
+	</tr>
+      </thead>
+      <tbody>
+	<mt:loop name="mailboxes">
+	  <tr class="<mt:if name="__odd__">odd<mt:else>even</mt:if>">
+	    <td class="cb first-child"><input type="checkbox" class="select first-child last-child checkbox" value="<mt:var name="id" />" name="id"></td>
+	    <td class="primary-col"><a class="mt-open-dialog" href="/mt/mt.cgi?id=<mt:var name="id" />&__mode=edit_ketaipost_mailbox&return_args=__mode%3Dlist_ketaipost%26blog_id%3D0"><mt:var name="address" encode_html="1" /></a></td>
+	    <td class="last-child"><mt:var name="blog" encode_html="1" /></td>
+	  </tr>
+	</mt:loop>
+      </tbody>
+      <tfoot>
+	<tr>
+	  <th class="cb first-child"><input type="checkbox" class="select first-child last-child checkbox" value="all" name="id-head"></th>
+	  <th id="at-email" class="primary-col">送信先メールアドレス</th>
+	  <th id="at-blog" class="last-child">ブログ</th>
+	</tr>
+      </tfoot>
+    </table>
+    <div class="actions-bar actions-bar-bottom" id="actions-bar-bottom">
+      <span class="button-actions actions">
+	<button class="mt-delete-mailboxes first-child" title="選択した送信先を削除" type="submit">削除</button>
+      </span>
+    </div>
+  </form>
+</div>
 
 <h2>送信元ユーザー（記事の作成者）</h2>
 <ul class="action-link-list last-child">
   <li class="first-child last-child"><a class="icon-left icon-create mt-open-dialog first-child last-child" href="/mt/mt.cgi?__mode=edit_ketaipost_author&return_args=__mode%3Dlist_ketaipost%26blog_id%3D0">新しい送信元メールアドレスを登録（ユーザー設定）</a></li>
 </ul>
 
-<table>
-  <thead>
-    <tr>
-      <th id="at-email">送信元メールアドレス</th>
-      <th id="at-author">ユーザー名</th>
-    </tr>
-  </thead>
-  <tbody>
-    <mt:loop name="authors">
-    <tr>
-      <td><a class="mt-open-dialog" href="/mt/mt.cgi?id=<mt:var name="id" />&__mode=edit_ketaipost_author&return_args=__mode%3Dlist_ketaipost%26blog_id%3D0">
-	  <mt:if name="address"><mt:var name="address" encode_html="1" /></mt:if>
-	  <mt:unless name="address">（未設定のすべてのメールアドレス）</mt:unless>
-      </a></td>
-      <td><mt:var name="author" encode_html="1" /></td>
-    </tr>
-    </mt:loop>
-  </tbody>
-</table>
+<div class="listing last-child">
+  <form method="post" action="<mt:var name="script_url" />" class="first-child last-child">
+    <input type="hidden" name="__mode" value="delete_ketaipost_author" />
+    <input type="hidden" name="magic_token" value="<mt:var name="magic_token" />" />
+    <input type="hidden" name="return_args" value="<mt:var name="return_args" />" />
+    <div class="actions-bar actions-bar-top" id="actions-bar-top">
+      <span class="button-actions actions">
+	<button class="mt-delete-authors first-child" title="選択した送信先を削除" type="submit">削除</button>
+      </span>
+    </div>
+    <table id="author-listing-form">
+      <thead>
+	<tr>
+	  <th class="cb first-child"><input type="checkbox" class="select first-child last-child checkbox" value="all" name="id-head"></th>
+	  <th id="at-email" class="primary-col">送信元メールアドレス</th>
+	  <th id="at-author" class="last-child">ユーザー名</th>
+	</tr>
+      </thead>
+      <tbody>
+	<mt:loop name="authors">
+	  <tr class="<mt:if name="__odd__">odd<mt:else>even</mt:if>">
+	    <td class="cb first-child"><input type="checkbox" class="select first-child last-child checkbox" value="<mt:var name="id" />" name="id"></td>
+	    <td class="primary-col"><a class="mt-open-dialog" href="/mt/mt.cgi?id=<mt:var name="id" />&__mode=edit_ketaipost_author&return_args=__mode%3Dlist_ketaipost%26blog_id%3D0">
+		<mt:if name="address"><mt:var name="address" encode_html="1" /></mt:if>
+		<mt:unless name="address">（未設定のすべてのメールアドレス）</mt:unless>
+	    </a></td>
+	    <td class="last-child"><mt:var name="author" encode_html="1" /></td>
+	  </tr>
+	</mt:loop>
+      </tbody>
+      <tfoot>
+	<tr>
+	  <th class="cb first-child"><input type="checkbox" class="select first-child last-child checkbox" value="all" name="id-head"></th>
+	  <th id="at-email" class="primary-col">送信元メールアドレス</th>
+	  <th id="at-author" class="last-child">ユーザー名</th>
+	</tr>
+      </tfoot>
+    </table>
+    <div class="actions-bar actions-bar-bottom" id="actions-bar-bottom">
+      <span class="button-actions actions">
+	<button class="mt-delete-authors first-child" title="選択した送信先を削除" type="submit">削除</button>
+      </span>
+    </div>
+  </form>
+</div>
 
 <mt:include name="include/footer.tmpl" />

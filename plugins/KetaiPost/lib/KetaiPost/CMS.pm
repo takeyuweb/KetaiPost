@@ -121,6 +121,21 @@ sub save_ketaipost_mailbox {
     return $app->load_tmpl('save_ketaipost_mailbox.tmpl', $params);
 }
 
+sub delete_ketaipost_mailbox {
+    my $app = shift;
+    my @ids = $app->param('id');
+
+    return unless $app->validate_magic;
+
+    foreach my $id(@ids) {
+	my $mailbox = KetaiPost::MailBox->load({id => $id});
+	next unless $mailbox;
+	$mailbox->remove();
+    }
+    
+    $app->call_return;
+}
+
 # 送信元メールアドレスとユーザーとの関連付け
 sub edit_ketaipost_author {
     my $app = shift;

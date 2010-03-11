@@ -22,9 +22,12 @@ use MIME::Base64::Perl;
 use Net::POP3;
 use MIME::Parser;
 
+use MT;
 use MT::Log;
 use MT::Image;
 use MT::Asset::Image;
+use MT::Category;
+use MT::Placement;
 use MT::Blog;
 use MT::Author;
 use MT::ConfigMgr;
@@ -44,7 +47,7 @@ my $plugin = MT::Plugin::KetaiPost->new({
     doc_link => '',
     author_name => 'Yuichi Takeuchi',
     author_link => 'http://takeyu-web.com/',
-    schema_version => 0.01,
+    schema_version => 0.02,
     object_classes => [ 'KetaiPost::MailBox', 'KetaiPost::Author' ],
     settings => new MT::PluginSettings([
 	['default_subject', { Scope => 'blog', Default => '' }],
@@ -80,12 +83,13 @@ my $plugin = MT::Plugin::KetaiPost->new({
 		},
 		methods => {
 		    list_ketaipost => '$ketaipost::KetaiPost::CMS::list_ketaipost',
+		    select_ketaipost_blog => '$ketaipost::KetaiPost::CMS::select_ketaipost_blog',
 		    edit_ketaipost_mailbox => '$ketaipost::KetaiPost::CMS::edit_ketaipost_mailbox',
 		    save_ketaipost_mailbox => '$ketaipost::KetaiPost::CMS::save_ketaipost_mailbox',
 		    delete_ketaipost_mailbox => '$ketaipost::KetaiPost::CMS::delete_ketaipost_mailbox',
 		    edit_ketaipost_author => '$ketaipost::KetaiPost::CMS::edit_ketaipost_author',
 		    save_ketaipost_author => '$ketaipost::KetaiPost::CMS::save_ketaipost_author',
-		    delete_ketaipost_authr => '$ketaipost::KetaiPost::CMS::delete_ketaipost_author',
+		    delete_ketaipost_author => '$ketaipost::KetaiPost::CMS::delete_ketaipost_author',
 		}
 	    }
 	}
@@ -237,9 +241,14 @@ sub do_ketai_post {
     my $app = MT::App::CMS->new;
     my $cfg = MT::ConfigMgr->instance;
 
+    my @entry_ids = ();
+
     my $mailboxes_iter = KetaiPost::MailBox->load_iter({}, {});
     while (my $mailbox = $mailboxes_iter->()) {
 	my $blog = MT::Blog->load($mailbox->blog_id);
+	my $category;
+	$category = MT::Category->load({id => $mailbox->category_id,
+					blog_id => $blog->id}) if $mailbox->category_id;
 
 	my $address = $mailbox->address;
 	my $host = $mailbox->host;
@@ -297,14 +306,17 @@ sub do_ketai_post {
 	    $text = MT::Util::encode_html($text);
 	    $text =~ s/\r\n/\n/g;
 	    $text =~ s/\n/<br \/>/g;
-	    my $entry = create_entry($blog, $author, $subject, $text);
+	    my $entry = create_entry($blog, $author, $subject, $text, $category);
 	    next unless $entry;
 	    
+	    push(@entry_ids, $entry->id);
+
 	    # 写真がない場合はこれで再構築して終わる
-	    unless(@$ref_images) {
-		&rebuild_entry_page($entry);
-		next;
-	    }
+	    next unless @$ref_images;
+	    #unless(@$ref_images) {
+		#&rebuild_entry_page($entry);
+		#next;
+	    #}
 
 	    $entry->created_on =~ /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/;
 	    my ($year, $month, $day, $hour, $min, $sec) = ($1, $2, $3, $4, $5, $6);
@@ -416,7 +428,6 @@ sub do_ketai_post {
 		$entry->text($buf."<div>$image_html</div>");
 		$entry->save;
 		$app->run_callbacks('cms_post_save.entry', $app, $entry, $old_entry);
-		&rebuild_entry_page($entry);
 	    }
 
 	    # $pop3->delete($id);
@@ -427,6 +438,12 @@ sub do_ketai_post {
 
     &log_debug("メールサーバからログアウトしました。");
     
+    # まとめて再構築
+    # 再構築時点でデータをリロードしないとうまく機能しない
+    foreach my $entry_id(@entry_ids) {
+	&rebuild_entry_page(MT::Entry->load($entry_id));
+    }
+
     1;
 }
 
@@ -545,7 +562,7 @@ sub parse_data {
 }
 
 sub create_entry {
-    my ($blog, $author, $subject, $text) = @_;
+    my ($blog, $author, $subject, $text, $category) = @_;
 
     my $app = MT::App::CMS->new;
     my $publisher = MT::WeblogPublisher->new;
@@ -554,6 +571,7 @@ sub create_entry {
     &log_debug("エントリを投稿します");
     
     $entry->blog_id($blog->id);
+    $entry->category_id($category->id) if $category;
     $entry->author_id($author->id);
     $entry->status($blog->status_default); # ブログの設定、新しく作った記事が「公開」になるか「下書き」になるか
     $entry->title($subject);
@@ -561,6 +579,16 @@ sub create_entry {
     $entry->allow_comments($blog->allow_comments_default); # コメントを受け付けるか
     $entry->allow_pings($blog->allow_pings_default); # トラックバックpingを受け付けるか
     if($entry->save) {
+	# 記事とカテゴリの関連付け
+	if($category) {
+	    my $place = MT::Placement->new;
+	    $place->entry_id($entry->id);
+	    $place->blog_id($entry->blog_id);
+	    $place->category_id($category->id);
+	    $place->is_primary(1);
+	    $place->save;
+	}
+
 	my $title = $entry->title;
 	utf8::decode($title);
 	&log_info("'".$author->name."'がブログ記事'".$title."'(ID:".$entry->id.")を追加しました。", {

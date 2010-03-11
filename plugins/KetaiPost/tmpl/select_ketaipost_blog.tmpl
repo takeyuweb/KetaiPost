@@ -1,0 +1,28 @@
+<mt:include name="dialog/header.tmpl" page_title="送信先メールアドレス（メールボックス）登録" />
+
+<form method="post" action="<mt:var name="script_url" />" class="first-child last-child">
+  <input type="hidden" name="__mode" value="edit_ketaipost_mailbox" />
+  <input type="hidden" name="magic_token" value="<mt:var name="magic_token" />" />
+  <input type="hidden" name="return_args" value="<mt:var name="return_args" />" />
+  <mt:if name="id">
+    <input type="hidden" name="id" value="<mt:var name="id" />" />
+  </mt:if>
+  
+  <h2>送信先ブログの選択</h2>
+  
+  <mtapp:setting
+     id="blog_id"
+     label="ブログ:">
+    <select name="blog_id" id="blog_id">
+      <mt:loop name="blogs">
+	<option value="<mt:var name="id" />" <mt:if name="selected">selected="selected"</mt:if>><mt:var name="name" encode_html="1" /></option>
+      </mt:loop>
+    </select>
+  </mtapp:setting>
+  
+  <div class="actions-bar last-child">
+    <button class="action primary-button first-child" title="次へ" type="submit">次へ</button>
+    <button title="キャンセル" class="cancel action mt-close-dialog last-child" onclick="parent.jQuery.fn.mtDialog.close(); return false;">キャンセル</button>
+  </div>
+</form>
+<mt:include name="dialog/footer.tmpl" />

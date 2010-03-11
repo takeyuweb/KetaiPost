@@ -30,9 +30,11 @@ sub list_ketaipost {
 
     while (my $obj = $mailboxes_iter->()) {
 	my $blog = MT::Blog->load($obj->blog_id);
+	my $category = MT::Category->load($obj->category_id);
 	my $ref_mailbox = {
 	    id => $obj->id,
 	    blog => $blog->name,
+	    category => $category ? $category->label : '',
 	    address => $obj->address
 	};
 	push(@mailboxes, $ref_mailbox);
@@ -58,9 +60,9 @@ sub list_ketaipost {
     return $app->build_page($tmpl, $params);
 }
 
-# 送信先メールアドレス（メールボックス）の登録
-# KetaiPost::MailBox のIDが指定されていれば編集
-sub edit_ketaipost_mailbox {
+# 送信先メールアドレス（メールボックス）のの編集の準備として、
+# ブログを選択させる（カテゴリの設定のため）
+sub select_ketaipost_blog {
     my $app = shift;
     my $id = $app->param('id');
     my $mailbox;
@@ -82,13 +84,68 @@ sub edit_ketaipost_mailbox {
 
     my $params = {
 	id => $mailbox->id,
+        blogs => \@blogs,
+	return_args => $app->param('return_args'),
+    };
+
+    return $app->load_tmpl('select_ketaipost_blog.tmpl', $params);
+}
+
+sub trace_category {
+    my ($ref_categories, $parent, $ref_chains) = @_;
+
+    $ref_chains ||= [];
+
+    push(@$ref_chains, $parent->label);
+    my $category = {
+	id => $parent->id,
+	label => join(' > ', @$ref_chains),
+	primary => 0
+    };
+    push(@$ref_categories, $category);
+
+    my $category_iter = MT::Category->load_iter({ parent => $parent->id }, {});
+    while (my $obj = $category_iter->()) {
+	&trace_category($ref_categories, $obj, $ref_chains);
+    }
+
+    pop(@$ref_chains);
+}
+
+# 送信先メールアドレス（メールボックス）の登録
+# KetaiPost::MailBox のIDが指定されていれば編集
+sub edit_ketaipost_mailbox {
+    my $app = shift;
+    my $id = $app->param('id');
+    my $blog_id = $app->param('blog_id');
+    my $mailbox;
+    $mailbox = KetaiPost::MailBox->load({ id => $id });
+    $mailbox = KetaiPost::MailBox->new unless $mailbox;
+
+    my $blog = MT::Blog->load({id => $blog_id});
+    die "ブログが見つかりません" unless $blog;
+
+    my @categories;
+
+    my @top_level_categories = MT::Category->top_level_categories($blog->id);
+    foreach my $obj(@top_level_categories) {
+	&trace_category(\@categories, $obj);
+    }
+    foreach my $category(@categories) {
+	$category->{selected} = 1 if $category->{id} == $mailbox->category_id;
+    }
+
+    my $params = {
+	id => $mailbox->id,
 	address => $mailbox->address,
 	account => $mailbox->account,
 	password => $mailbox->password,
 	host => $mailbox->host,
 	port => $mailbox->port || 110,
 	use_ssl => $mailbox->use_ssl,
-        blogs => \@blogs,
+	blog_name => $blog->name,
+	blog_id => $blog->id,
+	categories => \@categories,
 	return_args => $app->param('return_args'),
     };
 
@@ -100,12 +157,20 @@ sub edit_ketaipost_mailbox {
 sub save_ketaipost_mailbox {
     my $app = shift;
     my $id = $app->param('id');
+
+    return unless $app->validate_magic;
+
     my $mailbox;
     $mailbox = KetaiPost::MailBox->load($id) if $id > 0;
     $mailbox = KetaiPost::MailBox->new unless $mailbox;
 
-    my $blog = MT::Blog->load({'id' => $app->param('blog_id')});
+    my $blog_id = $app->param('blog_id');
+    my $category_id = $app->param('category_id');
+
+    my $blog = MT::Blog->load({'id' => $blog_id}) if $blog_id > 0;
+    my $category = MT::Category->load({id => $category_id, blog_id => $blog->id}) if $blog && $category_id > 0;
     $mailbox->blog_id($blog->id) if $blog;
+    $mailbox->category_id($category ? $category->id : 0);
     $mailbox->address($app->param('address'));
     $mailbox->host($app->param('host'));
     $mailbox->port($app->param('port'));
@@ -171,6 +236,9 @@ sub edit_ketaipost_author {
 sub save_ketaipost_author {
     my $app = shift;
     my $id = $app->param('id');
+
+    return unless $app->validate_magic;
+    
     my $author;
     $author = KetaiPost::Author->load($id) if $id > 0;
     $author = KetaiPost::Author->new unless $author;
@@ -187,6 +255,20 @@ sub save_ketaipost_author {
     return $app->load_tmpl('save_ketaipost_author.tmpl', $params);
 }
 
+sub delete_ketaipost_author {
+    my $app = shift;
+    my @ids = $app->param('id');
+
+    return unless $app->validate_magic;
+
+    foreach my $id(@ids) {
+	my $author = KetaiPost::Author->load({id => $id});
+	next unless $author;
+	$author->remove();
+    }
+    
+    $app->call_return;
+}
 
 1;
 

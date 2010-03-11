@@ -8,22 +8,33 @@
     <input type="hidden" name="id" value="<mt:var name="id" />" />
   </mt:if>
   
-  <h2>送信先の設定</h2>
+  <h2>記事登録先の設定</h2>
   
   <mtapp:setting
      id="blog_id"
      label="ブログ:">
-    <select name="blog_id" id="blog_id">
-      <mt:loop name="blogs">
-	<option value="<mt:var name="id" />" <mt:if name="selected">selected="selected"</mt:if>><mt:var name="name" encode_html="1" /></option>
-      </mt:loop>
-    </select>
+    <input type="hidden" name="blog_id" id="blog_id" value="<mt:var name="blog_id" />" />
+    <mt:var name="blog_name" encode_html="1" />
   </mtapp:setting>
   
   <mtapp:setting
+     id="category_id"
+     label="カテゴリ:">
+    <select name="category_id" id="category_id">
+      <option value="">指定しない</option>
+      <mt:loop name="categories">
+	<option value="<mt:var name="id" />" <mt:if name="selected">selected="selected"</mt:if>><mt:var name="label" encode_html="1" /></option>
+      </mt:loop>
+    </select>
+  </mtapp:setting>
+
+  <h2>送信先の設定</h2>
+  
+  <mtapp:setting
      id="address"
-     label="送信先メールアドレス:">
-    <input type="text" name="address" value="<mt:var name="address" encode_html="1" />" />
+     label="メールアドレス:">
+    <input type="text" name="address" value="<mt:var name="address" encode_html="1" />" /><br />
+    ここに送信されたメールを指定のブログ・カテゴリの記事として投稿します。
   </mtapp:setting>
   
   <h2>メールボックスの設定</h2>
@@ -67,6 +78,7 @@
   
   <div class="actions-bar last-child">
     <button class="close action primary-button first-child" title="OK" type="submit">OK</button>
+    <button class="action previous" title="戻る" onclick="history.back(); return false;">戻る</button>
     <button title="キャンセル" class="cancel action mt-close-dialog last-child" onclick="parent.jQuery.fn.mtDialog.close(); return false;">キャンセル</button>
   </div>
 </form>

@@ -244,8 +244,12 @@ sub process {
 		    
 		    # 写真を表示するように記事を編集
 		    my $old_entry = $entry->clone;
+
+		    my $alt = $asset->label;
+		    MT::I18N::encode_text($alt, undef, 'utf-8');
+		    utf8::decode($alt);
 		    my $image_html = sprintf('<a href="%s" target="_blank"><img src="%s" width="%d" height="%d" alt="%s" /></a>',
-					     $url, $thumbnail_url, $thumb_width, $thumb_height, $asset->label);
+					     $url, $thumbnail_url, $thumb_width, $thumb_height, $alt);
 		    my $buf = $entry->text;
 		    MT::I18N::encode_text($buf, undef, 'utf-8');
 		    utf8::decode($buf);

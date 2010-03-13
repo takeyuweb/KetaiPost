@@ -24,17 +24,17 @@ Movable Type (MTOS) 5 にメール投稿機能を追加するためのプラグ�
 
 
 == 動作環境
-cron が利用可能であること。
-Movable Type/MTOS バージョン5.0。
-+ Perl 5.8.1 以上で以下のモジュールがインストールされているサーバーであること。
-* <tt>Mail::POP3Client</tt>
-* <tt>MIME-tools</tt>
-また、POP3 over SSL (Gmailなど)のメールボックスを使用する場合は、次も必要です。
-* <tt>IO::Socket::SSL</tt>
+* cron が利用可能であること。
+* Movable Type/MTOS バージョン5.0。
+* Perl 5.8.1 以上で以下のモジュールがインストールされているサーバーであること。
+  * <tt>Mail::POP3Client</tt>
+  * <tt>MIME-tools</tt>
+  また、POP3 over SSL (Gmailなど)のメールボックスを使用する場合は、次も必要です。
+  * <tt>IO::Socket::SSL</tt>
 
-Mail::POP3Client 及び MIME-tools については、extlib に配置することで動作します。（たぶん）
-* <tt>extlib/Mail/POP3Client.pm</tt>
-* <tt>extlib/MIME/*.pm</tt>
+  なお、 Mail::POP3Client 及び MIME-tools については、extlib に配置することで動作します。（たぶん）
+  * <tt>extlib/Mail/POP3Client.pm</tt>
+  * <tt>extlib/MIME/*.pm</tt>
 
 
 == しくみ
@@ -53,8 +53,20 @@ KetaiPostはごくありふれた方法で記事の投稿を実現します。
 
 == インストール方法
 === メールボックスの用意
+POP3でメールを受信可能な適当なメールアドレス（メールボックス）を用意します。
+
+Gmailがオススメですが、その場合には<tt>IO::Socket::SSL</tt>モジュールが利用可能であることを確認して下さい。
+
+いたずらを防止するため、予想不可能なメールアドレスにします。
+また、公開したくないメールを誤って記事として投稿してしまうリスクを考えて、KetaiPost以外で利用しない専用のメールアドレスが良いです。
+
+拡張メールアドレス（@の前の+以降を無視する機能）が利用できれば、予測不可能なメールアドレスをたくさん用意することができます。
+
+  例）hoge+xxxx@takeyu-web.com が hoge@takeyu-web.com に届く。
+
 === ダウンロード・配置
 KetaiPostディレクトリ（フォルダ）をpluginsディレクトリにそのままコピーしてください。
+
 管理画面にアクセスすると、データベースの更新が自動的にはじまり、インストールが完了します。
 
 必要モジュールが足りない場合は、便宜cpan等でインストールするか、extlibディレクトリへ配置して下さい。

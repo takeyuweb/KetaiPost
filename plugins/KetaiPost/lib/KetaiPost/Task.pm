@@ -103,6 +103,7 @@ sub process {
 		$assign ||= KetaiPost::Author->load({ address => '' });
 		unless ($assign) {
 		    $self->{plugin}->log_error("unknown author (".$ref_data->{from}.")", blog_id => $blog->id);
+		    $pop3->Delete($id);
 		    next;
 		}
 		my $author = MT::Author->load({ id => $assign->author_id });
@@ -117,10 +118,11 @@ sub process {
 		# 権限のチェック
 		my $perms = MT::Permission->load({blog_id => $blog->id, author_id => $author->id});
 		unless ($perms && $perms->can_post) {
-		    log_error("記事の追加を試みましたが権限がありません。", {
+		    $self->{plugin}->log_error("記事の追加を試みましたが権限がありません。", {
 			blog_id => $blog->id,
 			author_id => $author->id
 		    });
+		    $pop3->Delete($id);
 		    next;
 		}
 		

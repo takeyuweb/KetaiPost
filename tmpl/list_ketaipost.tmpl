@@ -60,7 +60,7 @@
 	<mt:loop name="mailboxes">
 	  <tr class="<mt:if name="__odd__">odd<mt:else>even</mt:if>">
 	    <td class="cb "><input type="checkbox" class="select   checkbox" value="<mt:var name="id" />" name="id"></td>
-	    <td class="primary-col"><a class="mt-open-dialog" href="/mt/mt.cgi?id=<mt:var name="id" />&__mode=select_ketaipost_blog&return_args=__mode%3Dlist_ketaipost%26blog_id%3D0"><mt:var name="address" encode_html="1" /></a></td>
+	    <td class="primary-col"><a class="mt-open-dialog" href="<mt:var name="script_url" />?id=<mt:var name="id" />&__mode=select_ketaipost_blog&return_args=__mode%3Dlist_ketaipost%26blog_id%3D0"><mt:var name="address" encode_html="1" /></a></td>
 	    <td class=""><mt:var name="blog" encode_html="1" /></td>
 	    <td><mt:var name="category" encode_html="1" /></td>
 	  </tr>
@@ -110,7 +110,7 @@
 	<mt:loop name="authors">
 	  <tr class="<mt:if name="__odd__">odd<mt:else>even</mt:if>">
 	    <td class="cb "><input type="checkbox" class="select   checkbox" value="<mt:var name="id" />" name="id"></td>
-	    <td class="primary-col"><a class="mt-open-dialog" href="/mt/mt.cgi?id=<mt:var name="id" />&__mode=edit_ketaipost_author&return_args=__mode%3Dlist_ketaipost%26blog_id%3D0">
+	    <td class="primary-col"><a class="mt-open-dialog" href="<mt:var name="script_url" />?id=<mt:var name="id" />&__mode=edit_ketaipost_author&return_args=__mode%3Dlist_ketaipost%26blog_id%3D0">
 		<mt:if name="address"><mt:var name="address" encode_html="1" /></mt:if>
 		<mt:unless name="address">（未設定のすべてのメールアドレス）</mt:unless>
 	    </a></td>

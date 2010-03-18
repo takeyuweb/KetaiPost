@@ -31,8 +31,8 @@ DESCRIPTION
     schema_version => 0.02,
     object_classes => [ 'KetaiPost::MailBox', 'KetaiPost::Author' ],
     settings => new MT::PluginSettings([
-	['thumbnail_width', { Scope => 'blog', Default => 240 }],
-	['thumbnail_width', { Scope => 'system', Default => 240 }],
+	['thumbnail_size', { Scope => 'blog', Default => 240 }],
+	['thumbnail_size', { Scope => 'system', Default => 240 }],
 	['default_subject', { Scope => 'blog', Default => '' }],
 	['default_subject', { Scope => 'system', Default => '無題' }],
         ['use_debuglog', { Scope => 'system', Default => 0 }],
@@ -198,8 +198,8 @@ sub log_error {
 
 sub blog_config_template {
     my $tmpl = <<'EOT';
-<mtapp:setting id="thumbnail_width" label="サムネイルの横幅:">
-  <input type="text" name="thumbnail_width" value="<mt:var name="thumbnail_width" encode_html="1" />" style="width: 50px;" /> ピクセル<br />
+<mtapp:setting id="thumbnail_size" label="サムネイルの長辺の長さ:">
+  <input type="text" name="thumbnail_size" value="<mt:var name="thumbnail_size" encode_html="1" />" style="width: 50px;" /> ピクセル<br />
   空白の場合は、ブログ -> ウェブサイト -> システム の順で使用されます。
 </mtapp:setting>
 <mtapp:setting id="default_subject" label="デフォルトの記事タイトル:">
@@ -211,8 +211,8 @@ EOT
 
 sub system_config_template {
     my $tmpl = <<'EOT';
-<mtapp:setting id="thumbnail_width" label="サムネイルの横幅:">
-  <input type="text" name="thumbnail_width" value="<mt:var name="thumbnail_width" encode_html="1" />" style="width: 50px;" /> ピクセル<br />
+<mtapp:setting id="thumbnail_size" label="サムネイルの長辺の長さ:">
+  <input type="text" name="thumbnail_size" value="<mt:var name="thumbnail_size" encode_html="1" />" style="width: 50px;" /> ピクセル<br />
   空白の場合は、ブログ -> ウェブサイト -> システム の順で使用されます。
 </mtapp:setting>
 <mtapp:setting id="default_subject" label="デフォルトの記事タイトル:">

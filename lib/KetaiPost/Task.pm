@@ -214,7 +214,14 @@ sub process {
 		    
 		    # サムネイルの作成
 		    # サイズ計算
-		    my $scale = ($self->{plugin}->get_setting($blog->id, 'thumbnail_width') || 240) / $width;
+		    my $scale;
+		    if ($width > $height) {
+			# 長辺は幅、これがthumbnail_sizeで収まるように
+			$scale = ($self->{plugin}->get_setting($blog->id, 'thumbnail_size') || 240) / $width;
+		    } else {
+			# 長辺は高さ、これがthumbnail_sizeで収まるように
+			$scale = ($self->{plugin}->get_setting($blog->id, 'thumbnail_size') || 240) / $height;
+		    }
 		    $scale = 1.0 if $scale > 1;
 		    my ($thumbnail_path, $thumb_width, $thumb_height) = $asset->thumbnail_file(Scale => $scale * 100,
 											       Path => $relative_dir);

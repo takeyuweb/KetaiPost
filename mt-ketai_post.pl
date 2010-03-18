@@ -16,15 +16,38 @@ $VERSION = '0.1.3';
 use KetaiPost::MailBox;
 use KetaiPost::Author;
 
+sub exist_module {
+    my ($name) = @_;
+    eval "require $name";
+    return ($@ ? 0 : 1);
+}
+
+sub plugin_description {
+    my @lines = ('携帯メールを使った記事投稿のためのプラグイン（MT5専用）。<br />');
+
+    push(@lines, '依存モジュール：');
+    my $ref_modules = [
+	['Mail::POP3Client', 0],
+	['MIME::Tools', 0],
+	['IO::Socket::SSL', 1]
+    ];
+    foreach my $ref_option(@$ref_modules) {
+	my $name = $ref_option->[0];
+	my $line = "$name => 利用".(&exist_module($name) ? 'できます' : 'できません');
+	$line .= "(Optional)" if $ref_option->[1];
+	push(@lines, $line);
+    }
+    
+    join("<br />", @lines);
+}
+
 use MT;
 my $plugin = MT::Plugin::KetaiPost->new({
     id => 'ketaipost',
     key => __PACKAGE__,
     name => $PLUGIN_NAME,
     version => $VERSION,
-    description => <<'DESCRIPTION',
-携帯メールを使った記事投稿のためのプラグイン（MT5専用）。
-DESCRIPTION
+    description => &plugin_description,
     doc_link => '',
     author_name => 'Yuichi Takeuchi',
     author_link => 'http://takeyu-web.com/',

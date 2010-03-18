@@ -213,8 +213,10 @@ sub process {
 		    $self->{plugin}->log_debug("アイテムを登録しました id:".$asset->id."path:$file_path url:$url");
 		    
 		    # サムネイルの作成
-		    my ($thumbnail_path, $thumb_width, $thumb_height) = $asset->thumbnail_file(Square => 1,
-											       Width => 200,
+		    # サイズ計算
+		    my $scale = ($self->{plugin}->get_setting($blog->id, 'thumbnail_width') || 240) / $width;
+		    $scale = 1.0 if $scale > 1;
+		    my ($thumbnail_path, $thumb_width, $thumb_height) = $asset->thumbnail_file(Scale => $scale * 100,
 											       Path => $relative_dir);
 		    
 		    my ($thumbnail_basename, $thumbnail_dir, $thumbnail_ext) = fileparse($thumbnail_path, qr/\.[^.]*/);

@@ -11,7 +11,7 @@ use base qw( MT::Plugin );
 
 use vars qw($PLUGIN_NAME $VERSION);
 $PLUGIN_NAME = 'KetaiPost';
-$VERSION = '0.1.2';
+$VERSION = '0.1.3';
 
 use KetaiPost::MailBox;
 use KetaiPost::Author;
@@ -31,6 +31,8 @@ DESCRIPTION
     schema_version => 0.02,
     object_classes => [ 'KetaiPost::MailBox', 'KetaiPost::Author' ],
     settings => new MT::PluginSettings([
+	['thumbnail_width', { Scope => 'blog', Default => 240 }],
+	['thumbnail_width', { Scope => 'system', Default => 240 }],
 	['default_subject', { Scope => 'blog', Default => '' }],
 	['default_subject', { Scope => 'system', Default => '無題' }],
         ['use_debuglog', { Scope => 'system', Default => 0 }],
@@ -196,18 +198,26 @@ sub log_error {
 
 sub blog_config_template {
     my $tmpl = <<'EOT';
+<mtapp:setting id="thumbnail_width" label="サムネイルの横幅:">
+  <input type="text" name="thumbnail_width" value="<mt:var name="thumbnail_width" encode_html="1" />" style="width: 50px;" /> ピクセル<br />
+  空白の場合は、ブログ -> ウェブサイト -> システム の順で使用されます。
+</mtapp:setting>
 <mtapp:setting id="default_subject" label="デフォルトの記事タイトル:">
   <input type="text" name="default_subject" value="<mt:var name="default_subject" encode_html="1" />" class="full-width" /><br />
-  ブログ -> ウェブサイト -> システム の順で優先されます。
+  空白の場合は、ブログ -> ウェブサイト -> システム の順で使用されます。
 </mtapp:setting>
 EOT
 }
 
 sub system_config_template {
     my $tmpl = <<'EOT';
+<mtapp:setting id="thumbnail_width" label="サムネイルの横幅:">
+  <input type="text" name="thumbnail_width" value="<mt:var name="thumbnail_width" encode_html="1" />" style="width: 50px;" /> ピクセル<br />
+  空白の場合は、ブログ -> ウェブサイト -> システム の順で使用されます。
+</mtapp:setting>
 <mtapp:setting id="default_subject" label="デフォルトの記事タイトル:">
   <input type="text" name="default_subject" value="<mt:var name="default_subject" encode_html="1" />" class="full-width" /><br />
-  ブログ -> ウェブサイト -> システム の順で優先されます。
+  空白の場合は、ブログ -> ウェブサイト -> システム の順で使用されます。
 </mtapp:setting>
 <mtapp:setting id="use_debuglog" label="デバッグログ出力:">
   <mt:if name="use_debuglog">

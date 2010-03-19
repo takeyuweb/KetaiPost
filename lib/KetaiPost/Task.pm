@@ -255,11 +255,13 @@ sub process {
 		    my $old_entry = $entry->clone;
 
 		    my $alt = $asset->label;
+		    utf8::encode($alt) if utf8::is_utf8($alt);
 		    MT::I18N::encode_text($alt, undef, 'utf-8');
 		    utf8::decode($alt);
 		    my $image_html = sprintf('<a href="%s" target="_blank"><img src="%s" width="%d" height="%d" alt="%s" /></a>',
 					     $url, $thumbnail_url, $thumb_width, $thumb_height, $alt);
 		    my $buf = $entry->text;
+		    utf8::encode($buf) if utf8::is_utf8($buf);
 		    MT::I18N::encode_text($buf, undef, 'utf-8');
 		    utf8::decode($buf);
 		    $entry->text("<p>$image_html</p>".$buf);
@@ -293,11 +295,10 @@ sub parse_data {
     my @imagetype = ('.jpg','.jpeg', '.gif','.png');
     my $parser = MIME::Parser->new;
     $parser->output_dir($self->{tempdir});
-    $parser->decode_headers(1);
 
     my $entity = $parser->parse_data($message);
     my $head = $entity->head;
-    
+
     # 宛先取り出し
     my @recipients;
     my $recipient = $head->get('to');
@@ -326,12 +327,34 @@ sub parse_data {
     }
     $self->{plugin}->log_debug("umail: $umail uname: $uname");
     
+    # 件名
+    # Encode.pm でMIMEデコードができればそれを使う
+    # できなければ MIME::Base64を使う
     my $subject = $head->get('Subject');
-    my $subject_enc = Encode::Guess->guess($subject);
-    my $subject_charset = 'shiftjis';
-    $subject_charset = $subject_enc->name if (ref($subject_enc));
-    $self->{plugin}->log_debug("charset: $subject_charset (guess:".ref($subject_enc).")");
-    $subject = MT::I18N::encode_text($subject, $subject_charset, undef);
+    eval { require Encode::MIME::Header::ISO_2022_JP; };
+    unless ($@) {
+	$self->{plugin}->log_debug("Encode によるMIMEデコードを行います");
+	$subject = decode('MIME-Header', $subject);
+    } else {
+	$self->{plugin}->log_debug("MIME::Base64 によるMIMEデコードを行います");
+	require MIME::Base64;
+	
+	my @lines = split("\n", $subject);
+	my $charset;
+	my $encoded;
+	foreach my $line(@lines) {
+	    next unless $line =~ /=\?([^\?]+)\?B\?((\w|=)+)/;
+	    $charset = $1;
+	    $encoded .= $2;
+	}
+	$self->{plugin}->log_debug("encoded_subject: $encoded");
+	my $decoded = MIME::Base64::decode_base64($encoded);
+	$subject = encode('utf-8', decode($charset, $decoded));
+    }
+    $self->{plugin}->log_debug("subject: $subject");
+    utf8::encode($subject) if utf8::is_utf8($subject); # フラグを落とす
+    $subject = MT::I18N::encode_text($subject, 'utf-8', undef);
+    
     if ($subject) {
 	$subject =~ s/[\x00-\x1f]//g;
 	$subject = MT::Util::encode_html($subject);
@@ -395,7 +418,7 @@ sub parse_data {
     }->{lc $text_charset} || 'jis';
     
     $text = MT::I18N::encode_text($text, $text_charset, undef);
-    
+
     my $ref_data = {
 	recipients => \@recipients,
 	from => $umail,

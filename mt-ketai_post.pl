@@ -11,7 +11,7 @@ use base qw( MT::Plugin );
 
 use vars qw($PLUGIN_NAME $VERSION);
 $PLUGIN_NAME = 'KetaiPost';
-$VERSION = '0.1.3';
+$VERSION = '0.1.4';
 
 use KetaiPost::MailBox;
 use KetaiPost::Author;
@@ -29,7 +29,8 @@ sub plugin_description {
     my $ref_modules = [
 	['Mail::POP3Client', 0],
 	['MIME::Tools', 0],
-	['IO::Socket::SSL', 1]
+	['IO::Socket::SSL', 1],
+	['Encode::MIME::Header::ISO_2022_JP', 1]
     ];
     foreach my $ref_option(@$ref_modules) {
 	my $name = $ref_option->[0];

@@ -11,7 +11,7 @@ use base qw( MT::Plugin );
 
 use vars qw($PLUGIN_NAME $VERSION);
 $PLUGIN_NAME = 'KetaiPost';
-$VERSION = '0.1.4';
+$VERSION = '0.1.5';
 
 use KetaiPost::MailBox;
 use KetaiPost::Author;
@@ -23,23 +23,32 @@ sub exist_module {
 }
 
 sub plugin_description {
-    my @lines = ('携帯メールを使った記事投稿のためのプラグイン（MT5専用）。<br />');
-
+    my @lines = ();
+    push(@lines, '<div>');
+    push(@lines, '携帯メールを使った記事投稿のためのプラグイン（MT5専用）。<br /><br />');
     push(@lines, '依存モジュール：');
+    push(@lines, '<ul>');
     my $ref_modules = [
-	['Mail::POP3Client', 0],
-	['MIME::Tools', 0],
-	['IO::Socket::SSL', 1],
-	['Encode::MIME::Header::ISO_2022_JP', 1]
+	['Mail::POP3Client', 0, 'メールの受信に必要です。'],
+	['MIME::Tools', 0, 'メールの解析に必要です。'],
+	['IO::Socket::SSL', 1, 'SSLを使ったメールの受信（Gmailなど）に必要です。'],
+	['Encode::MIME::Header::ISO_2022_JP', 1, 'メールのデコードに使用します。'],
+	['Image::ExifTool', 1, '一部の携帯電話が送信する写真の向きを補正するために使用します。'],
+	['Image::Magick', 1, '一部の携帯電話が送信する写真の向きを補正するために使用します。']
     ];
     foreach my $ref_option(@$ref_modules) {
 	my $name = $ref_option->[0];
-	my $line = "$name => 利用".(&exist_module($name) ? 'できます' : 'できません');
+	my $line = "<li>";
+	$line .= "$name => 利用".(&exist_module($name) ? 'できます' : 'できません');
 	$line .= "(Optional)" if $ref_option->[1];
+	$line .= "<br />".$ref_option->[2] if $ref_option->[2];
+	$line .= "</li>";
 	push(@lines, $line);
     }
+    push(@lines, '</ul>');
+    push(@lines, '</div>');
     
-    join("<br />", @lines);
+    join("", @lines);
 }
 
 use MT;
@@ -106,6 +115,33 @@ my $plugin = MT::Plugin::KetaiPost->new({
 MT->add_plugin($plugin);
 
 sub instance { $plugin; }
+
+# ライブラリ使用チェック
+sub use_exiftool {
+    my $self = shift;
+    return $self->{use_exiftool} if defined($self->{use_exiftool});
+
+    eval { require Image::ExifTool; };
+    if ($@) {
+	$self->{use_exiftool} = 0;
+    } else {
+	$self->{use_exiftool} = 1;
+    }
+    $self->{use_exiftool};
+}
+
+sub use_magick {
+    my $self = shift;
+    return $self->{use_magick} if defined($self->{use_magick});
+
+    eval { require Image::Magick; };
+    if ($@) {
+	$self->{use_magick} = 0;
+    } else {
+	$self->{use_magick} = 1;
+    }
+    $self->{use_magick};
+}
 
 # 「システム」の設定値を取得
 # $plugin->get_system_setting($key);

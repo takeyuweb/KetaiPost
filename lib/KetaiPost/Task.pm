@@ -180,6 +180,41 @@ sub process {
 			}
 		    }
 
+		    # 必要に応じて向きを補正
+		    if ($self->{plugin}->use_exiftool) {
+			$self->{plugin}->log_debug("向きの補正が有効になっています。");
+			require Image::ExifTool;
+			my $exifTool = new Image::ExifTool;
+			# my $exifInfo = $exifTool->ImageInfo($name, 'Orientation');
+			my $ref_image_data = \($ref_image->{data});
+			my $exifInfo = $exifTool->ImageInfo($ref_image_data, 'Orientation');
+			my $rotation = $exifInfo->{Orientation};
+			# Horizontal (normal)
+			# Mirror horizontal
+			# Rotate 180
+			# Mirror vertical
+			# Mirror horizontal and rotate 270 CW
+			# Rotate 90 CW
+			# Mirror horizontal and rotate 90 CW
+			# Rotate 270 CW
+			my $degrees = 0;
+			if ($rotation eq 'Rotate 90 CW') {
+			    $degrees = 90;
+			} elsif ($rotation eq 'Rotate 180') {
+			    $degrees = 180;
+			} elsif ($rotation eq 'Rotate 270 CW') {
+			    $degrees = 270;
+			}
+			$self->{plugin}->log_debug("Orientation: $rotation");
+			if ($degrees && $self->{plugin}->use_magick) {
+			    require Image::Magick;
+			    my $img = Image::Magick->new;
+			    $img->BlobToImage($ref_image->{data});
+			    $img->Rotate(degrees => $degrees);
+			    $ref_image->{data} = $img->ImageToBlob();
+			}
+		    }
+
 		    # 保存
 		    my $bytes = $fmgr->put_data($ref_image->{data}, $file_path, 'upload');
 		    
@@ -311,10 +346,10 @@ sub parse_data {
 	push(@recipients, $buf);
     }
     # 宛先メールアドレスの制限
-    if (my $to = $options->{To}) {
-	$self->{plugin}->log_debug("to:$to recipients:".join(',', @recipients));
-	return unless grep(/\Q$to/, @recipients) > 0;
-    }
+    #if (my $to = $options->{To}) {
+	#$self->{plugin}->log_debug("to:$to recipients:".join(',', @recipients));
+	#return unless grep(/\Q$to/, @recipients) > 0;
+    #}
 
     #送信者取り出し
     my $umail = $head->get('From');
@@ -323,10 +358,19 @@ sub parse_data {
     @addrs = Mail::Address->parse($umail);
     foreach my $addr (@addrs) {
 	$umail = $addr->address;
-	$uname = $addr->name;
+	$uname = $addr->name || '';
     }
     $self->{plugin}->log_debug("umail: $umail uname: $uname");
     
+    # 時刻
+    # HTTP::Date が使えればメールの日付を取得
+    #my $written_time;
+    #if ($self->{plugin}->use_http_date) {
+	#require HTTP::Date;
+	#my $datestr = $head->get('Date');
+	#$witten_time = HTTP::Date::str2time($datestr);
+    #}
+
     # 件名
     # Encode.pm でMIMEデコードができればそれを使う
     # できなければ MIME::Base64を使う
@@ -377,7 +421,7 @@ sub parse_data {
 	    if ($type =~ /text\/plain/) {
 		#本文
 		$text = $part->bodyhandle->as_string;
-		$text_charset = $1 if $part->head->get('Content-Type') =~ /charset="(.+)"/;
+		$text_charset = $1 if $part->head->get('Content-Type') =~ /charset="?(\S+)"?/;
 	    } else {
 		#添付
 		#ファイル名を含むパスを取り出し
@@ -422,6 +466,7 @@ sub parse_data {
     my $ref_data = {
 	recipients => \@recipients,
 	from => $umail,
+	#time => $witten_time,
 	subject => $subject,
 	text => $text,
 	images => \@images

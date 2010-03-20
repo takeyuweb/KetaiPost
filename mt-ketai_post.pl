@@ -11,7 +11,7 @@ use base qw( MT::Plugin );
 
 use vars qw($PLUGIN_NAME $VERSION);
 $PLUGIN_NAME = 'KetaiPost';
-$VERSION = '0.1.7';
+$VERSION = '0.2.0';
 
 use KetaiPost::MailBox;
 use KetaiPost::Author;
@@ -33,7 +33,7 @@ sub plugin_description {
 	['MIME::Tools', 0, 'メールの解析に必要です。'],
 	['IO::Socket::SSL', 1, 'SSLを使ったメールの受信（Gmailなど）に必要です。'],
 	['Encode::MIME::Header::ISO_2022_JP', 1, 'メールのデコードに使用します。'],
-	['Image::ExifTool', 1, '一部の携帯電話が送信する写真の向きを補正するために使用します。'],
+	['Image::ExifTool', 1, '一部の携帯電話が送信する写真の向きを補正するために使用します。<br />また、写真からGPS位置情報を抽出するのにも使用します。'],
 	['Image::Magick', 1, '一部の携帯電話が送信する写真の向きを補正するために使用します。']
     ];
     foreach my $ref_option(@$ref_modules) {
@@ -64,10 +64,35 @@ my $plugin = MT::Plugin::KetaiPost->new({
     schema_version => 0.02,
     object_classes => [ 'KetaiPost::MailBox', 'KetaiPost::Author' ],
     settings => new MT::PluginSettings([
+	# ここから、位置情報に関する設定
+	# 位置情報を使う
+	# 0 継承
+	# 1 使わない
+	# 2 使う（地図を表示）
+	['use_latlng', { Scope => 'blog', Default => 0 }],
+	['use_latlng', { Scope => 'system', Default => 1 }],
+	# Google Map API Key
+	['gmap_key', { Scope => 'blog', Default => '' }],
+	['gmap_key', { Scope => 'system', Default => '' }],
+	# 地図の大きさ (XXX,YYY)
+	['gmap_width', { Scope => 'blog', Default => 0 }],
+	['gmap_width', { Scope => 'system', Default => 360 }],
+	['gmap_height', { Scope => 'blog', Default => 0 }],
+	['gmap_height', { Scope => 'system', Default => 240 }],
+	# 位置情報に関する設定ここまで
+	# サムネイルの形状
+	# 0 継承
+	# 1 そのまま縮小
+	# 2 正方形（切り取り）
+	['thumbnail_shape', { Scope => 'blog', Default => 0 }],
+	['thumbnail_shape', { Scope => 'system', Default => 1 }],
+	# サムネイルの長辺サイズ
 	['thumbnail_size', { Scope => 'blog', Default => 240 }],
 	['thumbnail_size', { Scope => 'system', Default => 240 }],
+	# タイトル無し
 	['default_subject', { Scope => 'blog', Default => '' }],
 	['default_subject', { Scope => 'system', Default => '無題' }],
+	# デバッグ用ログを出力
         ['use_debuglog', { Scope => 'system', Default => 0 }],
     ]),
     blog_config_template => \&blog_config_template,
@@ -80,8 +105,8 @@ my $plugin = MT::Plugin::KetaiPost->new({
         tasks =>  {
             'KetaiPost' => {
                 label     => 'KetaiPost',
-                # frequency => 1 * 60 * 60,   # no more than every 1 hours
-		frequency => 1,
+                frequency => 1 * 60 * 5,
+		# frequency => 1,
                 code      => \&do_ketai_post,
             },
         },
@@ -116,6 +141,8 @@ MT->add_plugin($plugin);
 
 sub instance { $plugin; }
 
+# 機能に関するチェック ここから
+
 # ライブラリ使用チェック
 sub use_exiftool {
     my $self = shift;
@@ -142,6 +169,18 @@ sub use_magick {
     }
     $self->{use_magick};
 }
+
+# 地図表示機能を利用できるか
+# use_gmap($blog_id)
+sub use_gmap {
+    my $self = shift;
+    my ($blog_id) = @_;
+    $self->use_exiftool &&
+      ($self->get_setting($blog_id, 'use_latlng') == 2) &&
+	$self->get_setting($blog_id, 'gmap_key');
+}
+
+# 機能に関するチェック ここまで
 
 # 「システム」の設定値を取得
 # $plugin->get_system_setting($key);
@@ -258,26 +297,107 @@ sub log_error {
 
 sub blog_config_template {
     my $tmpl = <<'EOT';
+<mtapp:setting id="geo" label="GPS位置情報:">
+  <mtapp:setting id="use_latlng" label="GPS位置情報:">
+    <mt:if name="use_latlng" eq="2">
+      <input type="radio" id="use_latlng_2" name="use_latlng" value="2" checked="checked" /><label for="use_latlng_2">する</label>&nbsp;
+      <input type="radio" id="use_latlng_1" name="use_latlng" value="1" /><label for="use_latlng_1">しない</label>&nbsp;
+      <input type="radio" id="use_latlng_0" name="use_latlng" value="0" /><label for="use_latlng_0">親の設定を継承</label><br />
+      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
+    </mt:if>
+    <mt:if name="use_latlng" eq="1">
+      <input type="radio" id="use_latlng_2" name="use_latlng" value="2" /><label for="use_latlng_2">する</label>&nbsp;
+      <input type="radio" id="use_latlng_1" name="use_latlng" value="1" checked="checked" /><label for="use_latlng_1">しない</label>&nbsp;
+      <input type="radio" id="use_latlng_0" name="use_latlng" value="0" /><label for="use_latlng_0">親の設定を継承</label><br />
+      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
+    </mt:if>
+    <mt:unless name="use_latlng">
+      <input type="radio" id="use_latlng_2" name="use_latlng" value="2" /><label for="use_latlng_2">する</label>&nbsp;
+      <input type="radio" id="use_latlng_1" name="use_latlng" value="1" /><label for="use_latlng_1">しない</label>&nbsp;
+      <input type="radio" id="use_latlng_0" name="use_latlng" value="0" checked="checked" /><label for="use_latlng_0">親の設定を継承</label><br />
+      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
+    </mt:unless>
+  </mtapp:setting>
+  <mtapp:setting id="gmap_key" label="Google Map API Key:">
+    <input type="text" name="gmap_key" value="<mt:var name="gmap_key" encode_html="1" />" class="full-width" /><br />
+    地図の表示に使用します。<br />
+    空白の場合は、ブログ -> ウェブサイト -> システム の優先度で利用します。
+  </mtapp:setting>
+  <mtapp:setting id="gmap_size" label="地図のサイズ:">
+    <input type="text" name="gmap_width" value="<mt:var name="gmap_width" encode_html="1" />" style="width: 50px;" /> × <input type="text" name="gmap_height" value="<mt:var name="gmap_height" encode_html="1" />" style="width: 50px;" /><br />
+  空白または0場合は、ブログ -> ウェブサイト -> システム の優先度で利用します。
+  </mtapp:setting>
+</mtapp:setting>
+<mtapp:setting id="thumbnail_shape" label="サムネイルの形状:">
+  <mt:if name="thumbnail_shape" eq="2">
+    <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" checked="checked" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
+    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" /><label for="thumbnail_shape_1">そのまま縮小</label>&nbsp;
+    <input type="radio" id="thumbnail_shape_0" name="thumbnail_shape" value="0" /><label for="thumbnail_shape_0">親の設定を継承</label>
+  </mt:if>
+  <mt:if name="thumbnail_shape" eq="1">
+    <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
+    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" checked="checked" /><label for="thumbnail_shape_1">そのまま縮小</label>&nbsp;
+    <input type="radio" id="thumbnail_shape_0" name="thumbnail_shape" value="0" /><label for="thumbnail_shape_0">親の設定を継承</label>
+  </mt:if>
+  <mt:unless name="thumbnail_shape">
+    <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
+    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" /><label for="thumbnail_shape_1">そのまま縮小</label>&nbsp;
+    <input type="radio" id="thumbnail_shape_0" name="thumbnail_shape" value="0" checked="checked" /><label for="thumbnail_shape_0">親の設定を継承</label>
+  </mt:unless>
+</mtapp:setting>
 <mtapp:setting id="thumbnail_size" label="サムネイルの長辺の長さ:">
   <input type="text" name="thumbnail_size" value="<mt:var name="thumbnail_size" encode_html="1" />" style="width: 50px;" /> ピクセル<br />
-  空白の場合は、ブログ -> ウェブサイト -> システム の順で使用されます。
+  空白または0の場合は、ブログ -> ウェブサイト -> システム の優先度で利用します。
 </mtapp:setting>
 <mtapp:setting id="default_subject" label="デフォルトの記事タイトル:">
   <input type="text" name="default_subject" value="<mt:var name="default_subject" encode_html="1" />" class="full-width" /><br />
-  空白の場合は、ブログ -> ウェブサイト -> システム の順で使用されます。
+  空白の場合は、ブログ -> ウェブサイト -> システム の優先度で利用します。
 </mtapp:setting>
 EOT
 }
 
 sub system_config_template {
     my $tmpl = <<'EOT';
+<mtapp:setting id="geo" label="GPS位置情報:">
+  <mtapp:setting id="use_latlng" label="地図表示:">
+    <mt:if name="use_latlng" eq="2">
+      <input type="radio" id="use_latlng_2" name="use_latlng" value="2" checked="checked" /><label for="use_latlng_2">する</label>&nbsp;
+      <input type="radio" id="use_latlng_1" name="use_latlng" value="1" /><label for="use_latlng_1">しない</label><br />
+      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
+    </mt:if>
+    <mt:if name="use_latlng" eq="1">
+      <input type="radio" id="use_latlng_2" name="use_latlng" value="2" /><label for="use_latlng_2">する</label>&nbsp;
+      <input type="radio" id="use_latlng_1" name="use_latlng" value="1" checked="checked" /><label for="use_latlng_1">しない</label><br />
+      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
+    </mt:if>
+  <mt:unless name="use_latlng">
+      <input type="radio" id="use_latlng_2" name="use_latlng" value="2" /><label for="use_latlng_2">する</label>&nbsp;
+      <input type="radio" id="use_latlng_1" name="use_latlng" value="1" /><label for="use_latlng_1">しない</label><br />
+      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
+    </mt:unless>
+  </mtapp:setting>
+  <mtapp:setting id="gmap_key" label="Google Map API Key:">
+    <input type="text" name="gmap_key" value="<mt:var name="gmap_key" encode_html="1" />" class="full-width" /><br />
+    地図の表示に使用します。
+  </mtapp:setting>
+  <mtapp:setting id="gmap_size" label="地図のサイズ:">
+    <input type="text" name="gmap_width" value="<mt:var name="gmap_width" encode_html="1" />" style="width: 50px;" /> × <input type="text" name="gmap_height" value="<mt:var name="gmap_height" encode_html="1" />" style="width: 50px;" />
+  </mtapp:setting>
+</mtapp:setting>
+<mtapp:setting id="thumbnail_shape" label="サムネイルの形状:">
+  <mt:if name="thumbnail_shape" eq="2">
+    <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" checked="checked" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
+    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" /><label for="thumbnail_shape_1">そのまま縮小</label>
+  <mt:else>
+    <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
+    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" checked="checked" /><label for="thumbnail_shape_1">そのまま縮小</label>
+  </mt:if>
+</mtapp:setting>
 <mtapp:setting id="thumbnail_size" label="サムネイルの長辺の長さ:">
-  <input type="text" name="thumbnail_size" value="<mt:var name="thumbnail_size" encode_html="1" />" style="width: 50px;" /> ピクセル<br />
-  空白の場合は、ブログ -> ウェブサイト -> システム の順で使用されます。
+  <input type="text" name="thumbnail_size" value="<mt:var name="thumbnail_size" encode_html="1" />" style="width: 50px;" /> ピクセル
 </mtapp:setting>
 <mtapp:setting id="default_subject" label="デフォルトの記事タイトル:">
-  <input type="text" name="default_subject" value="<mt:var name="default_subject" encode_html="1" />" class="full-width" /><br />
-  空白の場合は、ブログ -> ウェブサイト -> システム の順で使用されます。
+  <input type="text" name="default_subject" value="<mt:var name="default_subject" encode_html="1" />" class="full-width" />
 </mtapp:setting>
 <mtapp:setting id="use_debuglog" label="デバッグログ出力:">
   <mt:if name="use_debuglog">

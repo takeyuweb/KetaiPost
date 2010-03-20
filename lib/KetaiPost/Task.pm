@@ -172,6 +172,67 @@ sub process {
 		    
 		    $self->{plugin}->log_debug("file_path: $file_path\nurl: $url");
 		    
+		    my @latlng = ();
+
+		    # ExifTool が必要な処理
+		    if ($self->{plugin}->use_exiftool) {
+			require Image::ExifTool;
+
+			my $exifTool = new Image::ExifTool;
+			my $ref_image_data = \($ref_image->{data});
+			my $exifInfo = $exifTool->ImageInfo($ref_image_data,
+							    'Orientation',
+							    'GPSLatitude',
+							    'GPSLongitude');
+
+			# 必要に応じて向きを補正
+			if (1) {
+			    $self->{plugin}->log_debug("向きの補正が有効になっています。");
+			    
+			    my $rotation = $exifInfo->{Orientation};
+			    if ($rotation) {
+				# Horizontal (normal)
+				# Mirror horizontal
+				# Rotate 180
+				# Mirror vertical
+				# Mirror horizontal and rotate 270 CW
+				# Rotate 90 CW
+				# Mirror horizontal and rotate 90 CW
+				# Rotate 270 CW
+				my $degrees = 0;
+				if ($rotation eq 'Rotate 90 CW') {
+				    $degrees = 90;
+				} elsif ($rotation eq 'Rotate 180') {
+				    $degrees = 180;
+				} elsif ($rotation eq 'Rotate 270 CW') {
+				    $degrees = 270;
+				}
+				$self->{plugin}->log_debug("Orientation: $rotation");
+				if ($degrees && $self->{plugin}->use_magick) {
+				    require Image::Magick;
+				    my $img = Image::Magick->new;
+				    $img->BlobToImage($ref_image->{data});
+				    $img->Rotate(degrees => $degrees);
+				    $ref_image->{data} = $img->ImageToBlob();
+				}
+			    }
+			}
+
+			# 位置情報を取得
+			if ($self->{plugin}->use_gmap($blog->id)) {
+			    my @tmp = ($exifInfo->{GPSLatitude}, $exifInfo->{GPSLongitude});
+			    foreach my $geostr(@tmp) {
+				if ($geostr && $geostr =~ /(\S+) deg (\S+)' (.*)"/) {
+				    my $p1 = $1;
+				    my $p2 = $2/60;
+				    my $p3 = $3/3600;
+				    push(@latlng, $p1 + $p2 + $p3);
+				}
+			    }
+			    $self->{plugin}->log_debug("GPSLatitude: ".($tmp[0] || '')." GPSLongitude:".($tmp[1] || '')." => lat: ".($latlng[0] || '')." lng: ".($latlng[1] || ''));
+			}
+		    }
+
 		    # アップロード先ディレクトリ生成
 		    unless($fmgr->exists($dir)) {
 			unless ($fmgr->mkpath($dir)) {
@@ -179,44 +240,6 @@ sub process {
 			    next;
 			}
 		    }
-
-		    # 必要に応じて向きを補正
-		    if ($self->{plugin}->use_exiftool) {
-			$self->{plugin}->log_debug("向きの補正が有効になっています。");
-			require Image::ExifTool;
-			my $exifTool = new Image::ExifTool;
-			# my $exifInfo = $exifTool->ImageInfo($name, 'Orientation');
-			my $ref_image_data = \($ref_image->{data});
-			my $exifInfo = $exifTool->ImageInfo($ref_image_data, 'Orientation');
-			my $rotation = $exifInfo->{Orientation};
-			if ($rotation) {
-			    # Horizontal (normal)
-			    # Mirror horizontal
-			    # Rotate 180
-			    # Mirror vertical
-			    # Mirror horizontal and rotate 270 CW
-			    # Rotate 90 CW
-			    # Mirror horizontal and rotate 90 CW
-			    # Rotate 270 CW
-			    my $degrees = 0;
-			    if ($rotation eq 'Rotate 90 CW') {
-				$degrees = 90;
-			    } elsif ($rotation eq 'Rotate 180') {
-				$degrees = 180;
-			    } elsif ($rotation eq 'Rotate 270 CW') {
-				$degrees = 270;
-			    }
-			    $self->{plugin}->log_debug("Orientation: $rotation");
-			    if ($degrees && $self->{plugin}->use_magick) {
-				require Image::Magick;
-				my $img = Image::Magick->new;
-				$img->BlobToImage($ref_image->{data});
-				$img->Rotate(degrees => $degrees);
-				$ref_image->{data} = $img->ImageToBlob();
-			    }
-			}
-		    }
-
 		    # 保存
 		    my $bytes = $fmgr->put_data($ref_image->{data}, $file_path, 'upload');
 		    
@@ -250,18 +273,32 @@ sub process {
 		    $self->{plugin}->log_debug("アイテムを登録しました id:".$asset->id."path:$file_path url:$url");
 		    
 		    # サムネイルの作成
-		    # サイズ計算
-		    my $scale;
-		    if ($width > $height) {
-			# 長辺は幅、これがthumbnail_sizeで収まるように
-			$scale = ($self->{plugin}->get_setting($blog->id, 'thumbnail_size') || 240) / $width;
+		    my ($thumbnail_path, $thumb_width, $thumb_height);
+		    if ($self->{plugin}->get_setting($blog->id, 'thumbnail_shape') == 1) {
+			# そのまま縮小
+			# サイズ計算
+			my $scale;
+			if ($width > $height) {
+			    # 長辺は幅、これがthumbnail_sizeで収まるように
+			    $scale = ($self->{plugin}->get_setting($blog->id, 'thumbnail_size') || 240) / $width;
+			} else {
+			    # 長辺は高さ、これがthumbnail_sizeで収まるように
+			    $scale = ($self->{plugin}->get_setting($blog->id, 'thumbnail_size') || 240) / $height;
+			}
+			$scale = 1.0 if $scale > 1;
+			($thumbnail_path,
+			 $thumb_width,
+			 $thumb_height) = $asset->thumbnail_file(Scale => $scale * 100,
+								 Path => $relative_dir);
 		    } else {
-			# 長辺は高さ、これがthumbnail_sizeで収まるように
-			$scale = ($self->{plugin}->get_setting($blog->id, 'thumbnail_size') || 240) / $height;
+			# 正方形（切り取り）
+			($thumbnail_path,
+			 $thumb_width,
+			 $thumb_height) = $asset->thumbnail_file(Square =>1,
+								 Width => $self->{plugin}->get_setting($blog->id, 'thumbnail_size'),
+								 Path => $relative_dir);
 		    }
-		    $scale = 1.0 if $scale > 1;
-		    my ($thumbnail_path, $thumb_width, $thumb_height) = $asset->thumbnail_file(Scale => $scale * 100,
-											       Path => $relative_dir);
+		    
 		    
 		    my ($thumbnail_basename, $thumbnail_dir, $thumbnail_ext) = fileparse($thumbnail_path, qr/\.[^.]*/);
 		    my $thumbnail_filename = $thumbnail_basename.$thumbnail_ext;
@@ -297,11 +334,24 @@ sub process {
 		    utf8::decode($alt);
 		    my $image_html = sprintf('<a href="%s" target="_blank"><img src="%s" width="%d" height="%d" alt="%s" /></a>',
 					     $url, $thumbnail_url, $thumb_width, $thumb_height, $alt);
-		    my $buf = $entry->text;
-		    utf8::encode($buf) if utf8::is_utf8($buf);
-		    MT::I18N::encode_text($buf, undef, 'utf-8');
-		    utf8::decode($buf);
-		    $entry->text("<p>$image_html</p>".$buf);
+
+		    my $map_html;
+		    if (@latlng == 2) {
+			my $gmap_key = $self->{plugin}->get_setting($blog->id, 'gmap_key');
+			my ($gmap_width, $gmap_height) = (
+			    $self->{plugin}->get_setting($blog->id, 'gmap_width') || 360,
+			    $self->{plugin}->get_setting($blog->id, 'gmap_height') || 240,
+			);
+			$map_html = sprintf('<a href="http://maps.google.co.jp/maps?ie=UTF8&q=%f,%f&z=14" target="_blank" rel="nofollow"><img class="gps-map" src="http://maps.google.com/staticmap?center=%f,%f&zoom=14&size=%dx%d&maptype=roadmap&markers=%f,%f,red&key=%s" width="%d" height="%d" /></a>', $latlng[0], $latlng[1], $latlng[0], $latlng[1], $gmap_width, $gmap_height, $latlng[0], $latlng[1], $gmap_key, $gmap_width, $gmap_height);
+		    }
+		    
+		    my $old_text = $entry->text;
+		    utf8::encode($old_text) if utf8::is_utf8($old_text);
+		    MT::I18N::encode_text($old_text, undef, 'utf-8');
+		    utf8::decode($old_text);
+		    my $new_text = "<p>$image_html</p><p>".$old_text."</p>";
+		    $new_text .= "<p>$map_html</p>" if $map_html;
+		    $entry->text($new_text);
 		    $entry->save;
 		    $app->run_callbacks('cms_post_save.entry', $app, $entry, $old_entry);
 		}
@@ -327,13 +377,22 @@ sub parse_data {
     my ($message, $options) = @_;
     $options ||= {};
 
-    my $cfg = MT::ConfigMgr->instance;
-
-    my @imagetype = ('.jpg','.jpeg', '.gif','.png');
     my $parser = MIME::Parser->new;
     $parser->output_dir($self->{tempdir});
 
     my $entity = $parser->parse_data($message);
+
+    return $self->build_attributes($entity, $options);
+}
+
+# MIME::Entityを受け取り内容をチェックし、投稿が可能であれば連想配列でデータを返す
+sub build_attributes {
+    my $self = shift;
+    my ($entity, $options) = @_;
+
+    my $cfg = MT::ConfigMgr->instance;
+    my @imagetype = ('.jpg','.jpeg', '.gif','.png');
+
     my $head = $entity->head;
 
     # 宛先取り出し

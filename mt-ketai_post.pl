@@ -11,7 +11,7 @@ use base qw( MT::Plugin );
 
 use vars qw($PLUGIN_NAME $VERSION);
 $PLUGIN_NAME = 'KetaiPost';
-$VERSION = '0.1.6';
+$VERSION = '0.1.7';
 
 use KetaiPost::MailBox;
 use KetaiPost::Author;

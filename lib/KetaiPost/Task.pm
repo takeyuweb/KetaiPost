@@ -348,10 +348,10 @@ sub parse_data {
 	push(@recipients, $buf);
     }
     # 宛先メールアドレスの制限
-    #if (my $to = $options->{To}) {
-	#$self->{plugin}->log_debug("to:$to recipients:".join(',', @recipients));
-	#return unless grep(/\Q$to/, @recipients) > 0;
-    #}
+    if (my $to = $options->{To}) {
+	$self->{plugin}->log_debug("to:$to recipients:".join(',', @recipients));
+	return unless grep(/\Q$to/, @recipients) > 0;
+    }
 
     #送信者取り出し
     my $umail = $head->get('From');

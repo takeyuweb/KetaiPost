@@ -17,6 +17,7 @@ use MIME::Parser; # MIME-tools
 
 use MT::Image;
 use MT::Asset::Image;
+use MT::ObjectAsset;
 use MT::Category;
 use MT::Placement;
 use MT::Blog;
@@ -270,6 +271,15 @@ sub process {
 			$self->{plugin}->log_error("アイテムの登録に失敗");
 			next;
 		    }
+
+		    # エントリと関連づけ
+		    my $obj_asset = new MT::ObjectAsset;
+		    $obj_asset->blog_id($blog->id);
+		    $obj_asset->asset_id($asset->id);
+		    $obj_asset->object_ds('entry');
+		    $obj_asset->object_id($entry->id);
+		    $obj_asset->save;
+
 		    $self->{plugin}->log_debug("アイテムを登録しました id:".$asset->id."path:$file_path url:$url");
 		    
 		    # サムネイルの作成
@@ -342,7 +352,7 @@ sub process {
 			    $self->{plugin}->get_setting($blog->id, 'gmap_width') || 360,
 			    $self->{plugin}->get_setting($blog->id, 'gmap_height') || 240,
 			);
-			$map_html = sprintf('<a href="http://maps.google.co.jp/maps?ie=UTF8&q=%f,%f&z=14" target="_blank" rel="nofollow"><img class="gps-map" src="http://maps.google.com/staticmap?center=%f,%f&zoom=14&size=%dx%d&maptype=roadmap&markers=%f,%f,red&key=%s" width="%d" height="%d" /></a>', $latlng[0], $latlng[1], $latlng[0], $latlng[1], $gmap_width, $gmap_height, $latlng[0], $latlng[1], $gmap_key, $gmap_width, $gmap_height);
+			$map_html = sprintf('<a href="http://maps.google.co.jp/maps?ie=UTF8&q=%f,%f&ll=%f,%f&z=14" target="_blank" rel="nofollow"><img class="gps-map" src="http://maps.google.com/staticmap?center=%f,%f&zoom=14&size=%dx%d&maptype=roadmap&markers=%f,%f,red&key=%s" width="%d" height="%d" /></a>', $latlng[0], $latlng[1], $latlng[0], $latlng[1], $latlng[0], $latlng[1], $gmap_width, $gmap_height, $latlng[0], $latlng[1], $gmap_key, $gmap_width, $gmap_height);
 		    }
 		    
 		    my $old_text = $entry->text;

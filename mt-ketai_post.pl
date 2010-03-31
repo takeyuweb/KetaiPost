@@ -331,17 +331,17 @@ sub blog_config_template {
 <mtapp:setting id="thumbnail_shape" label="サムネイルの形状:">
   <mt:if name="thumbnail_shape" eq="2">
     <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" checked="checked" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
-    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" /><label for="thumbnail_shape_1">そのまま縮小</label>&nbsp;
+    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" /><label for="thumbnail_shape_1">縦横比率を維持して縮小</label>&nbsp;
     <input type="radio" id="thumbnail_shape_0" name="thumbnail_shape" value="0" /><label for="thumbnail_shape_0">親の設定を継承</label>
   </mt:if>
   <mt:if name="thumbnail_shape" eq="1">
     <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
-    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" checked="checked" /><label for="thumbnail_shape_1">そのまま縮小</label>&nbsp;
+    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" checked="checked" /><label for="thumbnail_shape_1">縦横比率を維持して縮小</label>&nbsp;
     <input type="radio" id="thumbnail_shape_0" name="thumbnail_shape" value="0" /><label for="thumbnail_shape_0">親の設定を継承</label>
   </mt:if>
   <mt:unless name="thumbnail_shape">
     <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
-    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" /><label for="thumbnail_shape_1">そのまま縮小</label>&nbsp;
+    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" /><label for="thumbnail_shape_1">縦横比率を維持して縮小</label>&nbsp;
     <input type="radio" id="thumbnail_shape_0" name="thumbnail_shape" value="0" checked="checked" /><label for="thumbnail_shape_0">親の設定を継承</label>
   </mt:unless>
 </mtapp:setting>
@@ -387,10 +387,10 @@ sub system_config_template {
 <mtapp:setting id="thumbnail_shape" label="サムネイルの形状:">
   <mt:if name="thumbnail_shape" eq="2">
     <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" checked="checked" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
-    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" /><label for="thumbnail_shape_1">そのまま縮小</label>
+    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" /><label for="thumbnail_shape_1">縦横比率を維持して縮小</label>
   <mt:else>
     <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
-    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" checked="checked" /><label for="thumbnail_shape_1">そのまま縮小</label>
+    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" checked="checked" /><label for="thumbnail_shape_1">縦横比率を維持して縮小</label>
   </mt:if>
 </mtapp:setting>
 <mtapp:setting id="thumbnail_size" label="サムネイルの長辺の長さ:">

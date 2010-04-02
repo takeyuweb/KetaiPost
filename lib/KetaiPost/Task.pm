@@ -103,7 +103,7 @@ sub process {
 		my $assign = KetaiPost::Author->load({ address => $ref_data->{from} });
 		$assign ||= KetaiPost::Author->load({ address => '' });
 		unless ($assign) {
-		    $self->{plugin}->log_error("unknown author (".$ref_data->{from}.")", blog_id => $blog->id);
+		    $self->{plugin}->log_error("unknown author (".$ref_data->{from}.")", { blog_id => $blog->id });
 		    $pop3->Delete($id);
 		    next;
 		}
@@ -488,6 +488,7 @@ sub build_attributes {
 	my $count = $entity->parts;
 	for(my $i = 0; $i < $count; $i++){
 	    my $part = $entity->parts($i);
+	    next unless $part->bodyhandle;
 	    my $type = $part->mime_type;
 	    if ($type =~ /text\/plain/) {
 		#本文

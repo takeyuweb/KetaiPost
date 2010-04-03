@@ -104,7 +104,7 @@ sub process {
 		$assign ||= KetaiPost::Author->load({ address => '' });
 		unless ($assign) {
 		    $self->{plugin}->log_error("unknown author (".$ref_data->{from}.")", { blog_id => $blog->id });
-		    $pop3->Delete($id);
+		    $pop3->Delete($id) unless ($self->{plugin}->get_system_setting('disable_delete_flag'));
 		    next;
 		}
 		my $author = MT::Author->load({ id => $assign->author_id });
@@ -123,7 +123,7 @@ sub process {
 			blog_id => $blog->id,
 			author_id => $author->id
 		    });
-		    $pop3->Delete($id);
+		    $pop3->Delete($id) unless ($self->{plugin}->get_system_setting('disable_delete_flag'));
 		    next;
 		}
 		
@@ -137,7 +137,7 @@ sub process {
 		next unless $entry;
 		
 		push(@entry_ids, $entry->id);
-		$pop3->Delete($id); # 削除フラグの設定
+		$pop3->Delete($id) unless ($self->{plugin}->get_system_setting('disable_delete_flag'));
 		
 		# 写真がない場合はここまで
 		next unless @$ref_images;
@@ -400,6 +400,10 @@ sub build_attributes {
     my $self = shift;
     my ($entity, $options) = @_;
 
+    my $carrier;
+    
+    require KetaiPost::Emoji if ($self->{plugin}->use_emoji);
+
     my $cfg = MT::ConfigMgr->instance;
     my @imagetype = ('.jpg','.jpeg', '.gif','.png');
 
@@ -431,6 +435,14 @@ sub build_attributes {
 	$umail = $addr->address;
 	$uname = $addr->name || '';
     }
+    if ($umail =~ /docomo\.ne\.jp\z/) {
+	$carrier = 'docomo';
+    } elsif ($umail =~ /ezweb\.ne\.jp\z/) {
+	$carrier = 'kddi';
+    } elsif ($umail =~ /(softbank\.ne\.jp|vodafone\.ne\.jp|disney\.ne\.jp)\z/) {
+	$carrier = 'softbank';
+    }
+    
     $self->{plugin}->log_debug("umail: $umail uname: $uname");
     
     # 時刻
@@ -447,7 +459,8 @@ sub build_attributes {
     # できなければ MIME::Base64を使う
     my $subject = $head->get('Subject');
     eval { require Encode::MIME::Header::ISO_2022_JP; };
-    unless ($@) {
+    # 絵文字を使う時はMIME-Headerを使うとうまくいかなかったのでとりあえず自前のBase64で
+    unless ($@ || $self->{plugin}->use_emoji) {
 	$self->{plugin}->log_debug("Encode によるMIMEデコードを行います");
 	$subject = decode('MIME-Header', $subject);
     } else {
@@ -458,13 +471,17 @@ sub build_attributes {
 	my $charset;
 	my $encoded;
 	foreach my $line(@lines) {
-	    next unless $line =~ /=\?([^\?]+)\?B\?((\w|=)+)/;
+	    next unless $line =~ /=\?([^\?]+)\?B\?([^\?]+)/;
 	    $charset = $1;
 	    $encoded .= $2;
 	}
 	$self->{plugin}->log_debug("encoded_subject: $encoded");
 	my $decoded = MIME::Base64::decode_base64($encoded);
-	$subject = encode('utf-8', decode($charset, $decoded));
+	if ($self->{plugin}->use_emoji) {
+	    $subject = KetaiPost::Emoji::decode2utf8($carrier, $charset, $decoded);
+	} else {
+	    $subject = encode('utf-8', decode($charset, $decoded));
+	}
     }
     $self->{plugin}->log_debug("subject: $subject");
     utf8::encode($subject) if utf8::is_utf8($subject); # フラグを落とす
@@ -478,7 +495,7 @@ sub build_attributes {
     my ($text, $text_charset);
     
     my @images;
-    
+
     unless ($entity->is_multipart) {
 	$text = $entity->bodyhandle->as_string;
 	$text_charset = $1 if $head->get('Content-Type') =~ /charset="?([\w_-]+)"?/i;
@@ -527,13 +544,20 @@ sub build_attributes {
     }
     
     my $normalized_text_charset = {
+	'shift-jis'=>'sjis',
 	'shift_jis'=>'sjis',
 	'iso-2022-jp'=>'jis',
 	'euc-jp'=>'euc',
 	'utf-8'=>'utf8'
     }->{lc $text_charset} || 'jis';
     $self->{plugin}->log_debug("body charset: ".(lc $text_charset)." ($normalized_text_charset)");
-    $text = MT::I18N::encode_text($text, $normalized_text_charset, undef);
+
+    if ($self->{plugin}->use_emoji) {
+	$text = KetaiPost::Emoji::decode2utf8($carrier, $normalized_text_charset, $text);
+	$text = MT::I18N::encode_text($text, 'utf8', undef);
+    } else {
+	$text = MT::I18N::encode_text($text, $normalized_text_charset, undef);
+    }
 
     my $ref_data = {
 	recipients => \@recipients,

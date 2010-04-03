@@ -11,7 +11,7 @@ use base qw( MT::Plugin );
 
 use vars qw($PLUGIN_NAME $VERSION);
 $PLUGIN_NAME = 'KetaiPost';
-$VERSION = '0.2.0';
+$VERSION = '0.2.1';
 
 use KetaiPost::MailBox;
 use KetaiPost::Author;
@@ -94,6 +94,8 @@ my $plugin = MT::Plugin::KetaiPost->new({
 	['default_subject', { Scope => 'system', Default => '無題' }],
 	# デバッグ用ログを出力
         ['use_debuglog', { Scope => 'system', Default => 0 }],
+	# 削除フラグを立てない（テスト用）
+	['disable_delete_flag', { Scope => 'system', Default => 0 }],
     ]),
     blog_config_template => \&blog_config_template,
     system_config_template => \&system_config_template,
@@ -178,6 +180,23 @@ sub use_gmap {
     $self->use_exiftool &&
       ($self->get_setting($blog_id, 'use_latlng') == 2) &&
 	$self->get_setting($blog_id, 'gmap_key');
+}
+
+# 絵文字変換機能を利用できるか
+# use_emoji
+sub use_emoji {
+    my $self = shift;
+    return $self->{use_emoji} if defined($self->{use_emoji});
+
+    eval {
+	require KetaiPost::Emoji;
+    };
+    if ($@) {
+	$self->{use_emoji} = 0;
+    } else {
+	$self->{use_emoji} = 1;
+    }
+    $self->{use_emoji};
 }
 
 # 機能に関するチェック ここまで
@@ -407,6 +426,16 @@ sub system_config_template {
     <input type="radio" id="use_debuglog_1" name="use_debuglog" value="1" /><label for="use_debuglog_1">する</label>&nbsp;
     <input type="radio" id="use_debuglog_0" name="use_debuglog" value="0" checked="checked" /><label for="use_debuglog_0">しない</label>
   </mt:if>
+</mtapp:setting>
+<mtapp:setting id="disable_delete_flag" label="受信後サーバから削除:">
+  <mt:if name="disable_delete_flag">
+    <input type="radio" id="disable_delete_flag_0" name="disable_delete_flag" value="0" /><label for="disable_delete_flag_0">する</label>&nbsp;
+    <input type="radio" id="disable_delete_flag_1" name="disable_delete_flag" value="1" checked="checked" /><label for="disable_delete_flag_1">しない</label>
+  <mt:else>
+    <input type="radio" id="disable_delete_flag_0" name="disable_delete_flag" value="0" checked="checked" /><label for="disable_delete_flag_0">する</label>&nbsp;
+    <input type="radio" id="disable_delete_flag_1" name="disable_delete_flag" value="1" /><label for="disable_delete_flag_1">しない</label>
+  </mt:if>
+  <br />「しない」場合、メールが削除されないので繰り返し投稿されます。（デバッグ用）
 </mtapp:setting>
 EOT
 }

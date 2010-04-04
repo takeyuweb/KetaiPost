@@ -34,7 +34,9 @@ sub plugin_description {
 	['IO::Socket::SSL', 1, 'SSLを使ったメールの受信（Gmailなど）に必要です。'],
 	['Encode::MIME::Header::ISO_2022_JP', 1, 'メールのデコードに使用します。'],
 	['Image::ExifTool', 1, '一部の携帯電話が送信する写真の向きを補正するために使用します。<br />また、写真からGPS位置情報を抽出するのにも使用します。'],
-	['Image::Magick', 1, '一部の携帯電話が送信する写真の向きを補正するために使用します。']
+	['Image::Magick', 1, '一部の携帯電話が送信する写真の向きを補正するために使用します。'],
+	['Encode::JP::Emoji', 1, '絵文字変換に利用します。'],
+	['Encode::JP::Emoji::FB_EMOJI_TYPECAST', 1, '絵文字変換に利用します。'],
     ];
     foreach my $ref_option(@$ref_modules) {
 	my $name = $ref_option->[0];

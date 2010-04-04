@@ -23,6 +23,8 @@ Movable Type (MTOS) 5 にメール投稿機能を追加するためのプラグ�
 * 受付用メールアドレスに「拡張メールアドレス」を指定することも可能なので、1つのメールボックスでたくさんの受付用メールアドレスを設定することが可能です。（Gmail等、拡張メールアドレスが使用可能なメールサーバーを利用のこと）
 * 写真に含まれるEXIF情報を使って、正しい向きに回転させて登録できます。（Image::ExifToolモジュールが必要）
 * 写真にGPSによる位置情報が含まれる場合は、記事に地図を表示させることができます。（設定ON/OFF可能）（実機では未確認。テスト環境がないので・・・）
+* Gmailを利用すれば、絵文字を利用できます。（Gmail以外の場合は、各キャリア網から抜けた時点で〓に変換されるため無理です）（私が持っているSO503i以外ではテストできていません。au/Softbankでは未知数。）
+* pure Perlの絵文字変換モジュール Encode::JP::Emoji を利用する為、共用サーバ等での絵文字利用も比較的容易です
 * どなたでも無料で利用できます。
 * 万年β？テスト状態です。
 
@@ -38,11 +40,15 @@ Movable Type (MTOS) 5 にメール投稿機能を追加するためのプラグ�
   EXIF情報を使った写真の回転や位置情報の表示を行う場合は、次も必要です。
   * <tt>Image::ExifTool</tt>
   * <tt>Image::Magick</tt> （写真の回転を行う場合）
+  Gmailを利用する方で、絵文字入りメールを掲載する場合は、Yusuke Kawasaki氏による次のモジュールが必要です。
+  * <tt>Encode::JP::Emoji</tt> ( http://search.cpan.org/~kawasaki/Encode-JP-Emoji-0.05/ )
+  * <tt>Encode::JP::Emoji::FB_EMOJI_TYPECAST</tt> ( http://search.cpan.org/~kawasaki/Encode-JP-Emoji-FB_EMOJI_TYPECAST-0.05/ )
 
-  なお、 Mail::POP3Client 及び MIME-tools については、extlib に配置することで動作します。（たぶん）
+  なお、 Mail::POP3Client 及び MIME-tools 、Encode::JP::Emoji については、extlib に配置することで動作します。（たぶん）
   * <tt>extlib/Mail/POP3Client.pm</tt>
-  * <tt>extlib/MIME/*.pm</tt>
-
+  * <tt>extlib/MIME/*</tt>	
+  * <tt>extlib/Encode/JP/Emoji.pm</tt>
+  * <tt>extlib/Encode/JP/Emoji/*</tt>
 
 == しくみ
 KetaiPostはごくありふれた方法で記事の投稿を実現します。

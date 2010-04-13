@@ -70,14 +70,16 @@ sub process {
 	my $account = $mailbox->account;
 	my $password = $mailbox->password;
 	my $port = $mailbox->port;
-	my $protocol = 'pop3';
+	my $auth_mode = $mailbox->use_apop ? 'APOP' : 'PASS';
 
 	unless ($host && $port && $account && $password) {
 	    $self->{plugin}->log_error("($address) ホスト名、ポート番号、アカウント名、パスワードの入力は必須です。");
 	    next;
 	}
 	
+	$self->{plugin}->log_debug("$address => AUTH_MODE:$auth_mode USER:$account HOST:$host SSL:".$mailbox->use_ssl);
 	my $pop3 = Mail::POP3Client->new(
+	    AUTH_MODE => $auth_mode,
 	    USER => $account,
 	    PASSWORD => $password,
 	    HOST => $host,
@@ -95,6 +97,8 @@ sub process {
 	eval {
 	    
 	    for (my $id=1; $id<=$count; $id++) {
+		#my $uid = $pop3->Uidl($id);
+		#$self->{plugin}->log_info("UID: $uid");
 		my $message = $pop3->HeadAndBody($id);
 		
 		my $ref_data = $self->parse_data($message, { To => $address });
@@ -459,28 +463,31 @@ sub build_attributes {
     # できなければ MIME::Base64を使う
     my $subject = $head->get('Subject');
     eval { require Encode::MIME::Header::ISO_2022_JP; };
-    # 絵文字を使う時はMIME-Headerを使うとうまくいかなかったのでとりあえず自前のBase64で
+    # 絵文字を使う時はMIME-Headerを使うと
+    # エスケープされてうまくいかなかったのでとりあえず自前のBase64で
     unless ($@ || $self->{plugin}->use_emoji) {
 	$self->{plugin}->log_debug("Encode によるMIMEデコードを行います");
 	$subject = decode('MIME-Header', $subject);
     } else {
-	$self->{plugin}->log_debug("MIME::Base64 によるMIMEデコードを行います");
-	require MIME::Base64;
-	
-	my @lines = split("\n", $subject);
-	my $charset;
-	my $encoded;
-	foreach my $line(@lines) {
-	    next unless $line =~ /=\?([^\?]+)\?B\?([^\?]+)/;
-	    $charset = $1;
-	    $encoded .= $2;
-	}
-	$self->{plugin}->log_debug("encoded_subject: $encoded");
-	my $decoded = MIME::Base64::decode_base64($encoded);
-	if ($self->{plugin}->use_emoji) {
-	    $subject = KetaiPost::Emoji::decode2utf8($carrier, $charset, $decoded);
-	} else {
-	    $subject = encode('utf-8', decode($charset, $decoded));
+	if ($subject =~ /=\?([^\?]+)\?B\?([^\?]+)/) {
+	    $self->{plugin}->log_debug("MIME::Base64 によるMIMEデコードを行います");
+	    require MIME::Base64;
+	    
+	    my @lines = split("\n", $subject);
+	    my $charset;
+	    my $encoded;
+	    foreach my $line(@lines) {
+		next unless $line =~ /=\?([^\?]+)\?B\?([^\?]+)/;
+		$charset = $1;
+		$encoded .= $2;
+	    }
+	    $self->{plugin}->log_debug("encoded_subject: $encoded");
+	    my $decoded = MIME::Base64::decode_base64($encoded);
+	    if ($self->{plugin}->use_emoji) {
+		$subject = KetaiPost::Emoji::decode2utf8($carrier, $charset, $decoded);
+	    } else {
+		$subject = encode('utf-8', decode($charset, $decoded));
+	    }
 	}
     }
     $self->{plugin}->log_debug("subject: $subject");

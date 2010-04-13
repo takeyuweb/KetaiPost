@@ -143,6 +143,7 @@ sub edit_ketaipost_mailbox {
 	host => $mailbox->host,
 	port => $mailbox->port || 110,
 	use_ssl => $mailbox->use_ssl,
+	use_apop => $mailbox->use_apop,
 	blog_name => $blog->name,
 	blog_id => $blog->id,
 	categories => \@categories,
@@ -177,6 +178,7 @@ sub save_ketaipost_mailbox {
     $mailbox->account($app->param('account'));
     $mailbox->password($app->param('password'));
     $mailbox->use_ssl($app->param('use_ssl'));
+    $mailbox->use_apop($app->param('use_apop'));
 
     $mailbox->save or die "保存に失敗しました：", $mailbox->errstr;
 

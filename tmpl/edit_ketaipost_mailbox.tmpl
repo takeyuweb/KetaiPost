@@ -64,7 +64,7 @@
   </mtapp:setting>
   
   <mtapp:setting
-     id="password"
+     id="use_ssl"
      label="SSL使用:">
     <mt:if name="use_ssl">
       <input type="radio" id="use_ssl_1" name="use_ssl" value="1" checked="checked" /><label for="use_ssl_1">する</label>&nbsp;
@@ -73,6 +73,19 @@
     <mt:unless name="use_ssl">
     <input type="radio" id="use_ssl_1" name="use_ssl" value="1" /><label for="use_ssl_1">する</label>&nbsp;
     <input type="radio" id="use_ssl_0" name="use_ssl" value="0" checked="checked" /><label for="use_ssl_0">しない</label>
+    </mt:unless>
+  </mtapp:setting>
+
+  <mtapp:setting
+     id="use_apop"
+     label="APOP使用:">
+    <mt:if name="use_apop">
+      <input type="radio" id="use_apop_1" name="use_apop" value="1" checked="checked" /><label for="use_apop_1">する</label>&nbsp;
+      <input type="radio" id="use_apop_0" name="use_apop" value="0" /><label for="use_apop_0">しない</label>
+    </mt:if>
+    <mt:unless name="use_apop">
+    <input type="radio" id="use_apop_1" name="use_apop" value="1" /><label for="use_apop_1">する</label>&nbsp;
+    <input type="radio" id="use_apop_0" name="use_apop" value="0" checked="checked" /><label for="use_apop_0">しない</label>
     </mt:unless>
   </mtapp:setting>
   

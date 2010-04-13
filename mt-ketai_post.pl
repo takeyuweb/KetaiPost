@@ -11,7 +11,7 @@ use base qw( MT::Plugin );
 
 use vars qw($PLUGIN_NAME $VERSION);
 $PLUGIN_NAME = 'KetaiPost';
-$VERSION = '0.2.1';
+$VERSION = '0.2.2';
 
 use KetaiPost::MailBox;
 use KetaiPost::Author;
@@ -63,7 +63,7 @@ my $plugin = MT::Plugin::KetaiPost->new({
     doc_link => '',
     author_name => 'Yuichi Takeuchi',
     author_link => 'http://takeyu-web.com/',
-    schema_version => 0.02,
+    schema_version => 0.03,
     object_classes => [ 'KetaiPost::MailBox', 'KetaiPost::Author' ],
     settings => new MT::PluginSettings([
 	# ここから、位置情報に関する設定

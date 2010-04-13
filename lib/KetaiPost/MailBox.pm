@@ -24,6 +24,7 @@ __PACKAGE__->install_properties ({
 	'host' => 'string(255) not null',
 	'port' => 'integer not null',
 	'use_ssl' => 'boolean',
+	'use_apop' => 'boolean',
     },
     indexes => {
     },

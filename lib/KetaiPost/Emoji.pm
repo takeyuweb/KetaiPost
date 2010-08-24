@@ -71,6 +71,7 @@ sub _decode {
     Encode::from_to($text, $encoding, 'utf8');  # Google UTF-8
     $text = Encode::decode('x-utf8-e4u-none', $text,
 			   Encode::JP::Emoji::FB_EMOJI_TYPECAST::FB_EMOJI_TYPECAST());
+    utf8::encode($text) if utf8::is_utf8($text); # フラグを落とす
 
     $text =~ s{<emoticons base="" name="([\w\-]{0,16})".*?/>}{_emoticon_mark($1)}eg;
     return $text;

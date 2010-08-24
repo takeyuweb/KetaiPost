@@ -62,15 +62,16 @@ sub decode2utf8 {
 # KetaiPost::Emoji::_decode('x-sjis-e4u-docomo', $text);
 sub _decode {
     my ($encoding, $text) = @_;
-    # encoding が sjis の場合は一足飛びに utf8 に変換しようとすると化けたので（Encode::JP::Emoji 0.05）
-    # 一度同系統のutf8に変換した後にTypeCast形式に変換
-    if ($encoding =~ /^(.+)sjis(.+)$/) {
-        my $sjis_encoding = $encoding;
-        $encoding = $1.'utf8'.$2;
-	Encode::from_to($text, $sjis_encoding, $encoding);
-    }
-    Encode::from_to($text, $encoding, 'x-utf8-e4u-none',
-		    Encode::JP::Emoji::FB_EMOJI_TYPECAST::FB_EMOJI_TYPECAST());
+    
+    # さくらだと↓でOKだけど、ハッスルだとダメだった 
+    #    Encode::from_to($text, $encoding, 'x-utf8-e4u-none',
+    #    Encode::JP::Emoji::FB_EMOJI_TYPECAST::FB_EMOJI_TYPECAST());
+    
+    # ↓これならできた
+    Encode::from_to($text, $encoding, 'utf8');  # Google UTF-8
+    $text = Encode::decode('x-utf8-e4u-none', $text,
+			   Encode::JP::Emoji::FB_EMOJI_TYPECAST::FB_EMOJI_TYPECAST());
+
     $text =~ s{<emoticons base="" name="([\w\-]{0,16})".*?/>}{_emoticon_mark($1)}eg;
     return $text;
 }

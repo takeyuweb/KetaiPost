@@ -221,7 +221,12 @@ sub use_ffmpeg {
     my ($blog_id) = @_;
     return $self->{use_ffmpeg} if defined($self->{use_ffmpeg});
 
-    if (-f $self->get_system_setting('ffmpeg_path') && $self->get_setting($blog_id, 'use_ffmpeg') == 2) {
+    my $path;
+    if($self->get_system_setting('ffmpeg_path') =~ /(\S+)\s*$/) {
+	$path = $1;
+    }
+
+    if (-f $path && $self->get_setting($blog_id, 'use_ffmpeg') == 2) {
 	$self->{use_ffmpeg} = 1;
     } else {
 	$self->{use_ffmpeg} = 0;
@@ -479,7 +484,9 @@ sub system_config_template {
   </mtapp:setting>
   <mtapp:setting id="ffmpeg_path" label="FFmpegコマンドのパス:">
     <input type="text" name="ffmpeg_path" value="<mt:var name="ffmpeg_path" encode_html="1" />" class="full-width" /><br />
-    ムービーファイルの変換に使用します。
+    ムービーファイルの変換に使用します。<br />
+    共有サーバ等で変換による過負荷でプロセスがkillされてしまう場合はniceコマンドを併用してください。<br />
+    例）nice +19 /usr/bin/ffmpeg
   </mtapp:setting>
   <mtapp:setting id="temp_dir" label="変換テンポラリディレクトリ:">
     <input type="text" name="temp_dir" value="<mt:var name="temp_dir" encode_html="1" />" class="full-width" /><br />

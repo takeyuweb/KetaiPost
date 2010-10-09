@@ -451,7 +451,8 @@ sub process {
 			);
 			close($tmppasslog_fh);
 
-			system("$ffmpeg_path -y -i $tmp_filename -an -r 15 -b 600k -pass 1 -passlogfile $tmppasslog_filename -vcodec flv -f flv $tmpout_filename && $ffmpeg_path -y -i $tmp_filename -ar 44100 -acodec libmp3lame -r 15 -b 600k -pass 2 -passlogfile $tmppasslog_filename -vcodec flv -f flv $tmpout_filename");
+			system("$ffmpeg_path -y -i $tmp_filename -an -r 15 -b 600k -pass 1 -passlogfile $tmppasslog_filename -vcodec flv -f flv $tmpout_filename");
+			system("$ffmpeg_path -y -i $tmp_filename -ar 44100 -acodec libmp3lame -r 15 -b 600k -pass 2 -passlogfile $tmppasslog_filename -vcodec flv -f flv $tmpout_filename");
 			my($tmpthumb_fh, $tmpthumb_filename) = File::Temp::tempfile(TEMPLATE => 'image_XXXXXX.jpg');
 			close($tmpthumb_fh);
 

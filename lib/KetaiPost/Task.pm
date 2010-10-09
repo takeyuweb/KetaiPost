@@ -377,8 +377,6 @@ sub process {
 
 		# 動画
 		if (@$ref_movies && $self->{plugin}->use_ffmpeg($blog->id)) {
-		    require FFmpeg::Command;
-		    
 		    my $ffmpeg_path = $self->{plugin}->get_system_setting('ffmpeg_path');
 		    $self->{plugin}->log_debug("ムービー掲載が有効です。");
 		    $self->{plugin}->log_debug("FFmpeg: $ffmpeg_path");
@@ -429,8 +427,6 @@ sub process {
 
 			# 変換
 			my $temp_dir = $self->{plugin}->get_system_setting('temp_dir');
-			my $ffmpeg = FFmpeg::Command->new($ffmpeg_path);
-			$ffmpeg->timeout(300);
 
 			my($tmp_fh, $tmp_filename) = File::Temp::tempfile(
 			    'movie_XXXXXX',
@@ -455,50 +451,13 @@ sub process {
 			);
 			close($tmppasslog_fh);
 
-			$ffmpeg->input_file($tmp_filename);
-			$ffmpeg->output_file($tmpout_filename);
-			$ffmpeg->options(
-			    '-y',
-			    '-an',
-			    '-r' => '15',
-			    '-b' => '600k',
-			    '-pass' => '1',
-			    '-passlogfile' => $tmppasslog_filename,
-			    '-vcodec' => 'flv',
-			    '-f' => 'flv'
-			);
-			$ffmpeg->exec();
-			$ffmpeg->options(
-			    '-y',
-			    '-ar' => '44100',
-			    '-acodec' => 'libmp3lame',
-			    '-r' => '15',
-			    '-b' => '600k',
-			    '-pass' => '2',
-			    '-passlogfile' => $tmppasslog_filename,
-			    '-vcodec' => 'flv',
-			    '-f' => 'flv'
-			);
-			$ffmpeg->exec();
-			#system("/usr/local/bin/ffmpeg -y -i $tmp_filename -an -r 15 -b 600k -pass 1 -passlogfile $tmppasslog_filename -vcodec flv -f flv $tmpout_filename && /usr/local/bin/ffmpeg -y -i $tmp_filename -ar 44100 -acodec libmp3lame -r 15 -b 600k -pass 2 -passlogfile $tmppasslog_filename -vcodec flv -f flv $tmpout_filename");
+			system("$ffmpeg_path -y -i $tmp_filename -an -r 15 -b 600k -pass 1 -passlogfile $tmppasslog_filename -vcodec flv -f flv $tmpout_filename && $ffmpeg_path -y -i $tmp_filename -ar 44100 -acodec libmp3lame -r 15 -b 600k -pass 2 -passlogfile $tmppasslog_filename -vcodec flv -f flv $tmpout_filename");
 			my($tmpthumb_fh, $tmpthumb_filename) = File::Temp::tempfile(TEMPLATE => 'image_XXXXXX.jpg');
 			close($tmpthumb_fh);
 
-			$ffmpeg->output_file($tmpthumb_filename);
-			$ffmpeg->options(
-			    '-y',
-			    '-f' => 'image2',
-			    '-vframes' => 1,
-			    '-ss' => 1,
-			    '-r' => 1,
-			    '-an',
-			    '-deinterlace'
-			);
-			$ffmpeg->exec();
-			#system("/usr/local/bin/ffmpeg -y -i $tmp_filename -f image2 -ss 1 -r 1 -an $tmpthumb_filename");
+			system("$ffmpeg_path -y -i $tmp_filename -f image2 -ss 1 -r 1 -an -deinterlace $tmpthumb_filename");
 			
 			# 保存
-			#my $bytes = $fmgr->put_data($ref_movie->{data}, $file_path, 'upload');
 			my $bytes = $fmgr->put($tmpout_filename, $file_path, 'upload');
 			unless (defined $bytes) {
 			    $self->{plugin}->log_error($fmgr->errstr);

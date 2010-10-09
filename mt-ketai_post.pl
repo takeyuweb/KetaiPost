@@ -11,7 +11,7 @@ use base qw( MT::Plugin );
 
 use vars qw($PLUGIN_NAME $VERSION);
 $PLUGIN_NAME = 'KetaiPost';
-$VERSION = '0.2.5';
+$VERSION = '0.3.0';
 
 use KetaiPost::MailBox;
 use KetaiPost::Author;
@@ -36,8 +36,7 @@ sub plugin_description {
 	['Image::ExifTool', 1, '一部の携帯電話が送信する写真の向きを補正するために使用します。<br />また、写真からGPS位置情報を抽出するのにも使用します。'],
 	['Image::Magick', 1, '一部の携帯電話が送信する写真の向きを補正するために使用します。'],
 	['Encode::JP::Emoji', 1, '絵文字変換に利用します。'],
-	['Encode::JP::Emoji::FB_EMOJI_TYPECAST', 1, '絵文字変換に利用します。'],
-	['FFmpeg::Command', 1, 'ムービー変換に使用します。']
+	['Encode::JP::Emoji::FB_EMOJI_TYPECAST', 1, '絵文字変換に利用します。']
     ];
     foreach my $ref_option(@$ref_modules) {
 	my $name = $ref_option->[0];
@@ -125,8 +124,8 @@ my $plugin = MT::Plugin::KetaiPost->new({
         tasks =>  {
             'KetaiPost' => {
                 label     => 'KetaiPost',
-                frequency => 1 * 60 * 5,
-		# frequency => 1,
+                #frequency => 1 * 60 * 5,
+		 frequency => 1,
                 code      => \&do_ketai_post,
             },
         },
@@ -222,13 +221,10 @@ sub use_ffmpeg {
     my ($blog_id) = @_;
     return $self->{use_ffmpeg} if defined($self->{use_ffmpeg});
 
-    eval {
-	require FFmpeg::Command;
-    };
-    if ($@ || ! -f $self->get_system_setting('ffmpeg_path') || $self->get_setting($blog_id, 'use_ffmpeg') != 2) {
-	$self->{use_ffmpeg} = 0;
-    } else {
+    if (-f $self->get_system_setting('ffmpeg_path') && $self->get_setting($blog_id, 'use_ffmpeg') == 2) {
 	$self->{use_ffmpeg} = 1;
+    } else {
+	$self->{use_ffmpeg} = 0;
     }
     $self->{use_ffmpeg};
 }

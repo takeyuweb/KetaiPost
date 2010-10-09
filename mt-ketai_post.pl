@@ -11,7 +11,7 @@ use base qw( MT::Plugin );
 
 use vars qw($PLUGIN_NAME $VERSION);
 $PLUGIN_NAME = 'KetaiPost';
-$VERSION = '0.2.4';
+$VERSION = '0.2.5';
 
 use KetaiPost::MailBox;
 use KetaiPost::Author;
@@ -37,6 +37,7 @@ sub plugin_description {
 	['Image::Magick', 1, '一部の携帯電話が送信する写真の向きを補正するために使用します。'],
 	['Encode::JP::Emoji', 1, '絵文字変換に利用します。'],
 	['Encode::JP::Emoji::FB_EMOJI_TYPECAST', 1, '絵文字変換に利用します。'],
+	['FFmpeg::Command', 1, 'ムービー変換に使用します。']
     ];
     foreach my $ref_option(@$ref_modules) {
 	my $name = $ref_option->[0];
@@ -98,6 +99,21 @@ my $plugin = MT::Plugin::KetaiPost->new({
         ['use_debuglog', { Scope => 'system', Default => 0 }],
 	# 削除フラグを立てない（テスト用）
 	['disable_delete_flag', { Scope => 'system', Default => 0 }],
+	# 動画掲載
+	# 0 : 設定を継承
+	# 1 : 利用しない
+	# 2 : 利用する
+	['use_ffmpeg', { Scope => 'blog', Default => 0 }],
+	['use_ffmpeg', { Scope => 'system', Default => 1 }],
+	# FFmpegのパス
+	['ffmpeg_path', { Scope => 'system', Default => '' }],
+	# 一時ファイル置き場
+	['temp_dir', { Scope => 'system', Default => '/tmp' }],
+	# プレイヤー
+	['jwplayer_url', { Scope => 'blog', Default => '' }],
+	['jwplayer_url', { Scope => 'system', Default => '/jwplayer/' }],
+	['player_size', { Scope => 'blog', Default => 360 }],
+	['player_size', { Scope => 'system', Default => 360 }],
     ]),
     blog_config_template => \&blog_config_template,
     system_config_template => \&system_config_template,
@@ -199,6 +215,22 @@ sub use_emoji {
 	$self->{use_emoji} = 1;
     }
     $self->{use_emoji};
+}
+
+sub use_ffmpeg {
+    my $self = shift;
+    my ($blog_id) = @_;
+    return $self->{use_ffmpeg} if defined($self->{use_ffmpeg});
+
+    eval {
+	require FFmpeg::Command;
+    };
+    if ($@ || ! -f $self->get_system_setting('ffmpeg_path') || $self->get_setting($blog_id, 'use_ffmpeg') != 2) {
+	$self->{use_ffmpeg} = 0;
+    } else {
+	$self->{use_ffmpeg} = 1;
+    }
+    $self->{use_ffmpeg};
 }
 
 # 機能に関するチェック ここまで
@@ -349,6 +381,37 @@ sub blog_config_template {
   空白または0場合は、ブログ -> ウェブサイト -> システム の優先度で利用します。
   </mtapp:setting>
 </mtapp:setting>
+<mtapp:setting id="movie" label="ムービー:">
+  <mtapp:setting id="use_ffmpeg" label="掲載:">
+    <mt:if name="use_ffmpeg" eq="2">
+      <input type="radio" id="use_ffmpeg_2" name="use_ffmpeg" value="2" checked="checked" /><label for="use_ffmpeg_2">する</label>&nbsp;
+      <input type="radio" id="use_ffmpeg_1" name="use_ffmpeg" value="1" /><label for="use_ffmpeg_1">しない</label>&nbsp;
+      <input type="radio" id="use_ffmpeg_0" name="use_ffmpeg" value="0" /><label for="use_ffmpeg_0">親の設定を継承</label><br />
+      「する」に設定すると、メールに添付された動画ファイルをFLVに変換しブログに掲載します。（ffmpegが必要）
+    </mt:if>
+    <mt:if name="use_ffmpeg" eq="1">
+      <input type="radio" id="use_ffmpeg_2" name="use_ffmpeg" value="2" /><label for="use_ffmpeg_2">する</label>&nbsp;
+      <input type="radio" id="use_ffmpeg_1" name="use_ffmpeg" value="1" checked="checked" /><label for="use_ffmpeg_1">しない</label>&nbsp;
+      <input type="radio" id="use_ffmpeg_0" name="use_ffmpeg" value="0" /><label for="use_ffmpeg_0">親の設定を継承</label><br />
+      「する」に設定すると、メールに添付された動画ファイルをFLVに変換しブログに掲載します。（ffmpegが必要）
+    </mt:if>
+    <mt:unless name="use_ffmpeg">
+      <input type="radio" id="use_ffmpeg_2" name="use_ffmpeg" value="2" /><label for="use_ffmpeg_2">する</label>&nbsp;
+      <input type="radio" id="use_ffmpeg_1" name="use_ffmpeg" value="1" /><label for="use_ffmpeg_1">しない</label>&nbsp;
+      <input type="radio" id="use_ffmpeg_0" name="use_ffmpeg" value="0" checked="checked" /><label for="use_ffmpeg_0">親の設定を継承</label><br />
+      「する」に設定すると、メールに添付された動画ファイルをFLVに変換しブログに掲載します。（ffmpegが必要）<br />
+       利用する場合は、システムの設定で別途「ffmpegコマンドのパス」を設定してください。
+    </mt:unless>
+  </mtapp:setting>
+  <mtapp:setting id="jwplayer_url" label="JW PlayerのURL:">
+    <input type="text" name="jwplayer_url" value="<mt:var name="jwplayer_url" encode_html="1" />" class="full-width" /><br />
+    JW Player(player.swf/jwplayer.js)を配置したディレクトリのURL<br />
+    空白の場合は、ブログ -> ウェブサイト -> システム の優先度で利用します。
+  </mtapp:setting>
+  <mtapp:setting id="player_size" label="プレイヤーの長辺の長さ:">
+    <input type="text" name="player_size" value="<mt:var name="player_size" encode_html="1" />" style="width: 50px;" /> ピクセル
+  </mtapp:setting>
+</mtapp:setting>
 <mtapp:setting id="thumbnail_shape" label="サムネイルの形状:">
   <mt:if name="thumbnail_shape" eq="2">
     <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" checked="checked" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
@@ -403,6 +466,36 @@ sub system_config_template {
   </mtapp:setting>
   <mtapp:setting id="gmap_size" label="地図のサイズ:">
     <input type="text" name="gmap_width" value="<mt:var name="gmap_width" encode_html="1" />" style="width: 50px;" /> × <input type="text" name="gmap_height" value="<mt:var name="gmap_height" encode_html="1" />" style="width: 50px;" />
+  </mtapp:setting>
+</mtapp:setting>
+<mtapp:setting id="movie" label="ムービー:">
+  <mtapp:setting id="use_ffmpeg" label="掲載:">
+    <mt:if name="use_ffmpeg" eq="2">
+      <input type="radio" id="use_ffmpeg_2" name="use_ffmpeg" value="2" checked="checked" /><label for="use_ffmpeg_2">する</label>&nbsp;
+      <input type="radio" id="use_ffmpeg_1" name="use_ffmpeg" value="1" /><label for="use_ffmpeg_1">しない</label>
+      「する」に設定すると、メールに添付された動画ファイルをFLVに変換しブログに掲載します。（ffmpegが必要）
+    </mt:if>
+    <mt:if name="use_ffmpeg" eq="1">
+      <input type="radio" id="use_ffmpeg_2" name="use_ffmpeg" value="2" /><label for="use_ffmpeg_2">する</label>&nbsp;
+      <input type="radio" id="use_ffmpeg_1" name="use_ffmpeg" value="1" checked="checked" /><label for="use_ffmpeg_1">しない</label>
+      「する」に設定すると、メールに添付された動画ファイルをFLVに変換しブログに掲載します。（ffmpegが必要）
+    </mt:if>
+  </mtapp:setting>
+  <mtapp:setting id="ffmpeg_path" label="FFmpegコマンドのパス:">
+    <input type="text" name="ffmpeg_path" value="<mt:var name="ffmpeg_path" encode_html="1" />" class="full-width" /><br />
+    ムービーファイルの変換に使用します。
+  </mtapp:setting>
+  <mtapp:setting id="temp_dir" label="変換テンポラリディレクトリ:">
+    <input type="text" name="temp_dir" value="<mt:var name="temp_dir" encode_html="1" />" class="full-width" /><br />
+    ムービーファイルの変換に使用します。<br />
+    ./run-periodic-tasks の実行権限で読み書き可能なパーミッションであること。
+  </mtapp:setting>
+  <mtapp:setting id="jwplayer_url" label="JW PlayerのURL:">
+    <input type="text" name="jwplayer_url" value="<mt:var name="jwplayer_url" encode_html="1" />" class="full-width" /><br />
+    JW Player(player.swf/jwplayer.js)を配置したディレクトリのURL
+  </mtapp:setting>
+  <mtapp:setting id="player_size" label="プレイヤーの長辺の長さ:">
+    <input type="text" name="player_size" value="<mt:var name="player_size" encode_html="1" />" style="width: 50px;" /> ピクセル
   </mtapp:setting>
 </mtapp:setting>
 <mtapp:setting id="thumbnail_shape" label="サムネイルの形状:">

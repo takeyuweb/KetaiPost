@@ -119,6 +119,10 @@ sub process {
 		foreach my $ref_image(@$ref_images) {
 		    $self->{plugin}->log_debug("filename: ".$ref_image->{filename});
 		}
+		my $ref_movies = $ref_data->{movies};
+		foreach my $ref_movie(@$ref_movies) {
+		    $self->{plugin}->log_debug("filename: ".$ref_movie->{filename});
+		}
 		
 		# 権限のチェック
 		my $perms = MT::Permission->load({blog_id => $blog->id, author_id => $author->id});
@@ -144,231 +148,468 @@ sub process {
 		$pop3->Delete($id) unless ($self->{plugin}->get_system_setting('disable_delete_flag'));
 		
 		# 写真がない場合はここまで
-		next unless @$ref_images;
+		if (@$ref_images) {
 		
-		$entry->created_on =~ /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/;
-		my ($year, $month, $day, $hour, $min, $sec) = ($1, $2, $3, $4, $5, $6);
-		
-		# 添付写真の保存
-		# ファイルマネージャのインスタンス生成
-		my $fmgr = MT::FileMgr->new('Local');
-		unless ($fmgr) {
-		    $self->{plugin}->log_error(MT::FileMgr->errstr);
-		    next;
-		}
-		
-		my $now = time;
-		my @t = MT::Util::offset_time_list($now, $blog);
-		for(my $i=0; $i<@$ref_images; $i++) {
-		    my $ref_image = $ref_images->[$i];
-		    # 新しいファイル名
-		    my $new_filename = sprintf("%d_%d_%d%s", $entry->id, $now, $i, $ref_image->{ext});
-		    # ブログルート
-		    my $root_path = $blog->site_path; # サーバ内パス
-		    my $root_url = $blog->site_url;   # URL
-		    # 保存先
-		    my $relative_dir = "ketai_post_files/".($t[5]+1900).'/'.($t[4]+1)."/".($t[3])."/";
-		    my $relative_file_path = $relative_dir.$new_filename; # 相対パス
-		    my $file_path = File::Spec->catfile($root_path, $relative_file_path); # サーバ内パス
-		    my $dir = dirname($file_path); # ディレクトリ名
-		    my $url = $root_url;
-		    $url .= '/' if $url !~ m!/$!;
-		    $url .= $relative_file_path; # URL
+		    $entry->created_on =~ /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/;
+		    my ($year, $month, $day, $hour, $min, $sec) = ($1, $2, $3, $4, $5, $6);
 		    
-		    $self->{plugin}->log_debug("file_path: $file_path\nurl: $url");
-		    
-		    my @latlng = ();
-
-		    # ExifTool が必要な処理
-		    if ($self->{plugin}->use_exiftool) {
-			require Image::ExifTool;
-
-			my $exifTool = new Image::ExifTool;
-			my $ref_image_data = \($ref_image->{data});
-			my $exifInfo = $exifTool->ImageInfo($ref_image_data,
-							    'Orientation',
-							    'GPSLatitude',
-							    'GPSLongitude');
-
-			# 必要に応じて向きを補正
-			if (1) {
-			    $self->{plugin}->log_debug("向きの補正が有効になっています。");
-			    
-			    my $rotation = $exifInfo->{Orientation};
-			    if ($rotation) {
-				# Horizontal (normal)
-				# Mirror horizontal
-				# Rotate 180
-				# Mirror vertical
-				# Mirror horizontal and rotate 270 CW
-				# Rotate 90 CW
-				# Mirror horizontal and rotate 90 CW
-				# Rotate 270 CW
-				my $degrees = 0;
-				if ($rotation eq 'Rotate 90 CW') {
-				    $degrees = 90;
-				} elsif ($rotation eq 'Rotate 180') {
-				    $degrees = 180;
-				} elsif ($rotation eq 'Rotate 270 CW') {
-				    $degrees = 270;
-				}
-				$self->{plugin}->log_debug("Orientation: $rotation");
-				if ($degrees && $self->{plugin}->use_magick) {
-				    require Image::Magick;
-				    my $img = Image::Magick->new;
-				    $img->BlobToImage($ref_image->{data});
-				    $img->Rotate(degrees => $degrees);
-				    $ref_image->{data} = $img->ImageToBlob();
-				}
-			    }
-			}
-
-			# 位置情報を取得
-			if ($self->{plugin}->use_gmap($blog->id)) {
-			    my @tmp = ($exifInfo->{GPSLatitude}, $exifInfo->{GPSLongitude});
-			    foreach my $geostr(@tmp) {
-				if ($geostr && $geostr =~ /(\S+) deg (\S+)' (.*)"/) {
-				    my $p1 = $1;
-				    my $p2 = $2/60;
-				    my $p3 = $3/3600;
-				    push(@latlng, $p1 + $p2 + $p3);
-				}
-			    }
-			    $self->{plugin}->log_debug("GPSLatitude: ".($tmp[0] || '')." GPSLongitude:".($tmp[1] || '')." => lat: ".($latlng[0] || '')." lng: ".($latlng[1] || ''));
-			}
+		    # 添付写真の保存
+		    # ファイルマネージャのインスタンス生成
+		    my $fmgr = MT::FileMgr->new('Local');
+		    unless ($fmgr) {
+			$self->{plugin}->log_error(MT::FileMgr->errstr);
+			next;
 		    }
-
-		    # アップロード先ディレクトリ生成
-		    unless($fmgr->exists($dir)) {
-			unless ($fmgr->mkpath($dir)) {
+		    
+		    my $now = time;
+		    my @t = MT::Util::offset_time_list($now, $blog);
+		    for(my $i=0; $i<@$ref_images; $i++) {
+			my $ref_image = $ref_images->[$i];
+			# 新しいファイル名
+			my $new_filename = sprintf("%d_%d_%d%s", $entry->id, $now, $i, $ref_image->{ext});
+			# ブログルート
+			my $root_path = $blog->site_path; # サーバ内パス
+			my $root_url = $blog->site_url;   # URL
+			# 保存先
+			my $relative_dir = "ketai_post_files/".($t[5]+1900).'/'.($t[4]+1)."/".($t[3])."/";
+			my $relative_file_path = $relative_dir.$new_filename; # 相対パス
+			my $file_path = File::Spec->catfile($root_path, $relative_file_path); # サーバ内パス
+			my $dir = dirname($file_path); # ディレクトリ名
+			my $url = $root_url;
+			$url .= '/' if $url !~ m!/$!;
+			$url .= $relative_file_path; # URL
+			
+			$self->{plugin}->log_debug("file_path: $file_path\nurl: $url");
+			
+			my @latlng = ();
+			
+			# ExifTool が必要な処理
+			if ($self->{plugin}->use_exiftool) {
+			    require Image::ExifTool;
+			    
+			    my $exifTool = new Image::ExifTool;
+			    my $ref_image_data = \($ref_image->{data});
+			    my $exifInfo = $exifTool->ImageInfo($ref_image_data,
+								'Orientation',
+								'GPSLatitude',
+								'GPSLongitude');
+			    
+			    # 必要に応じて向きを補正
+			    if (1) {
+				$self->{plugin}->log_debug("向きの補正が有効になっています。");
+				
+				my $rotation = $exifInfo->{Orientation};
+				if ($rotation) {
+				    # Horizontal (normal)
+				    # Mirror horizontal
+				    # Rotate 180
+				    # Mirror vertical
+				    # Mirror horizontal and rotate 270 CW
+				    # Rotate 90 CW
+				    # Mirror horizontal and rotate 90 CW
+				    # Rotate 270 CW
+				    my $degrees = 0;
+				    if ($rotation eq 'Rotate 90 CW') {
+					$degrees = 90;
+				    } elsif ($rotation eq 'Rotate 180') {
+					$degrees = 180;
+				    } elsif ($rotation eq 'Rotate 270 CW') {
+					$degrees = 270;
+				    }
+				    $self->{plugin}->log_debug("Orientation: $rotation");
+				    if ($degrees && $self->{plugin}->use_magick) {
+					require Image::Magick;
+					my $img = Image::Magick->new;
+					$img->BlobToImage($ref_image->{data});
+					$img->Rotate(degrees => $degrees);
+					$ref_image->{data} = $img->ImageToBlob();
+				    }
+				}
+			    }
+			    
+			    # 位置情報を取得
+			    if ($self->{plugin}->use_gmap($blog->id)) {
+				my @tmp = ($exifInfo->{GPSLatitude}, $exifInfo->{GPSLongitude});
+				foreach my $geostr(@tmp) {
+				    if ($geostr && $geostr =~ /(\S+) deg (\S+)' (.*)"/) {
+					my $p1 = $1;
+					my $p2 = $2/60;
+					my $p3 = $3/3600;
+					push(@latlng, $p1 + $p2 + $p3);
+				    }
+				}
+				$self->{plugin}->log_debug("GPSLatitude: ".($tmp[0] || '')." GPSLongitude:".($tmp[1] || '')." => lat: ".($latlng[0] || '')." lng: ".($latlng[1] || ''));
+			    }
+			}
+			
+			# アップロード先ディレクトリ生成
+			unless($fmgr->exists($dir)) {
+			    unless ($fmgr->mkpath($dir)) {
+				$self->{plugin}->log_error($fmgr->errstr);
+				next;
+			    }
+			}
+			# 保存
+			my $bytes = $fmgr->put_data($ref_image->{data}, $file_path, 'upload');
+			
+			unless (defined $bytes) {
 			    $self->{plugin}->log_error($fmgr->errstr);
 			    next;
+			}		    
+			$self->{plugin}->log_debug($ref_image->{filename}." を ".$file_path." に書き込みました。");
+			
+			# アイテムの登録
+			my $img = MT::Image->new( Filename => $file_path );
+			my($blob, $width, $height) = $img->scale( Scale => 100 );
+			my $asset = MT::Asset::Image->new;
+			# 情報セット
+			$asset->label($entry->title);
+			$asset->file_path($file_path);
+			$asset->file_name($new_filename);
+			$asset->file_ext($ref_image->{ext});
+			$asset->blog_id($blog->id);
+			$asset->created_by($author->id);
+			$asset->modified_by($author->id);
+			$asset->url($url);
+			$asset->description('');
+			$asset->image_width($width);
+			$asset->image_height($height);
+			# アイテムの登録
+			unless ($asset->save) {
+			    $self->{plugin}->log_error("アイテムの登録に失敗");
+			    next;
 			}
-		    }
-		    # 保存
-		    my $bytes = $fmgr->put_data($ref_image->{data}, $file_path, 'upload');
-		    
-		    unless (defined $bytes) {
-			$self->{plugin}->log_error($fmgr->errstr);
-			next;
-		    }		    
-		    $self->{plugin}->log_debug($ref_image->{filename}." を ".$file_path." に書き込みました。");
-		    
-		    # アイテムの登録
-		    my $img = MT::Image->new( Filename => $file_path );
-		    my($blob, $width, $height) = $img->scale( Scale => 100 );
-		    my $asset = MT::Asset::Image->new;
-		    # 情報セット
-		    $asset->label($entry->title);
-		    $asset->file_path($file_path);
-		    $asset->file_name($new_filename);
-		    $asset->file_ext($ref_image->{ext});
-		    $asset->blog_id($blog->id);
-		    $asset->created_by($author->id);
-		    $asset->modified_by($author->id);
-		    $asset->url($url);
-		    $asset->description('');
-		    $asset->image_width($width);
-		    $asset->image_height($height);
-		    # アイテムの登録
-		    unless ($asset->save) {
-			$self->{plugin}->log_error("アイテムの登録に失敗");
-			next;
-		    }
 
-		    # エントリと関連づけ
-		    my $obj_asset = new MT::ObjectAsset;
-		    $obj_asset->blog_id($blog->id);
-		    $obj_asset->asset_id($asset->id);
-		    $obj_asset->object_ds('entry');
-		    $obj_asset->object_id($entry->id);
-		    $obj_asset->save;
-
-		    $self->{plugin}->log_debug("アイテムを登録しました id:".$asset->id."path:$file_path url:$url");
-		    
-		    # サムネイルの作成
-		    my ($thumbnail_path, $thumb_width, $thumb_height);
-		    if ($self->{plugin}->get_setting($blog->id, 'thumbnail_shape') == 1) {
-			# そのまま縮小
-			# サイズ計算
-			my $scale;
-			if ($width > $height) {
-			    # 長辺は幅、これがthumbnail_sizeで収まるように
-			    $scale = ($self->{plugin}->get_setting($blog->id, 'thumbnail_size') || 240) / $width;
+			# エントリと関連づけ
+			my $obj_asset = new MT::ObjectAsset;
+			$obj_asset->blog_id($blog->id);
+			$obj_asset->asset_id($asset->id);
+			$obj_asset->object_ds('entry');
+			$obj_asset->object_id($entry->id);
+			$obj_asset->save;
+			
+			$self->{plugin}->log_debug("アイテムを登録しました id:".$asset->id."path:$file_path url:$url");
+			
+			# サムネイルの作成
+			my ($thumbnail_path, $thumb_width, $thumb_height);
+			if ($self->{plugin}->get_setting($blog->id, 'thumbnail_shape') == 1) {
+			    # そのまま縮小
+			    # サイズ計算
+			    my $scale;
+			    if ($width > $height) {
+				# 長辺は幅、これがthumbnail_sizeで収まるように
+				$scale = ($self->{plugin}->get_setting($blog->id, 'thumbnail_size') || 240) / $width;
+			    } else {
+				# 長辺は高さ、これがthumbnail_sizeで収まるように
+				$scale = ($self->{plugin}->get_setting($blog->id, 'thumbnail_size') || 240) / $height;
+			    }
+			    $scale = 1.0 if $scale > 1;
+			    ($thumbnail_path,
+			     $thumb_width,
+			     $thumb_height) = $asset->thumbnail_file(Scale => $scale * 100,
+								     Path => $relative_dir);
 			} else {
-			    # 長辺は高さ、これがthumbnail_sizeで収まるように
-			    $scale = ($self->{plugin}->get_setting($blog->id, 'thumbnail_size') || 240) / $height;
+			    # 正方形（切り取り）
+			    ($thumbnail_path,
+			     $thumb_width,
+			     $thumb_height) = $asset->thumbnail_file(Square =>1,
+								     Width => $self->{plugin}->get_setting($blog->id, 'thumbnail_size'),
+								     Path => $relative_dir);
+			}
+			
+			
+			my ($thumbnail_basename, $thumbnail_dir, $thumbnail_ext) = fileparse($thumbnail_path, qr/\.[^.]*/);
+			my $thumbnail_filename = $thumbnail_basename.$thumbnail_ext;
+			my $thumbnail_url = $root_url.File::Spec->abs2rel($thumbnail_path, $root_path);
+			$self->{plugin}->log_debug("サムネイルを作成しました。 path:$thumbnail_path url:$thumbnail_url");
+			
+			# サムネイルの登録
+			my $thumbnail_asset = MT::Asset::Image->new;
+			$thumbnail_asset->label('Thumbnail of '.$asset->label);
+			$thumbnail_asset->file_path($thumbnail_path);
+			$thumbnail_asset->file_name($thumbnail_filename);
+			$thumbnail_asset->file_ext($thumbnail_ext);
+			$thumbnail_asset->blog_id($blog->id);
+			$thumbnail_asset->created_by($author->id);
+			$thumbnail_asset->modified_by($author->id);
+			$thumbnail_asset->url($thumbnail_url);
+			$thumbnail_asset->description('');
+			$thumbnail_asset->image_width($thumb_width);
+			$thumbnail_asset->image_height($thumb_height);
+			$thumbnail_asset->parent($asset->id); # 親の設定
+			
+			unless ($thumbnail_asset->save) {
+			    $self->{plugin}->log_error("サムネイルのアイテム登録に失敗");
+			}
+			$self->{plugin}->log_debug("サムネイルを登録しました id:".$asset->id."path:$thumbnail_path url:$thumbnail_url parent_id:".$asset->id);
+			
+			# 写真を表示するように記事を編集
+			my $old_entry = $entry->clone;
+			
+			my $alt = $asset->label;
+			utf8::encode($alt) if utf8::is_utf8($alt);
+			MT::I18N::encode_text($alt, undef, 'utf-8');
+			utf8::decode($alt);
+			my $image_html = sprintf('<a href="%s" target="_blank"><img src="%s" width="%d" height="%d" alt="%s" /></a>',
+						 $url, $thumbnail_url, $thumb_width, $thumb_height, $alt);
+			
+			my $map_html;
+			if (@latlng == 2) {
+			    my $gmap_key = $self->{plugin}->get_setting($blog->id, 'gmap_key');
+			    my ($gmap_width, $gmap_height) = (
+				$self->{plugin}->get_setting($blog->id, 'gmap_width') || 360,
+				$self->{plugin}->get_setting($blog->id, 'gmap_height') || 240,
+			    );
+			    $map_html = sprintf('<a href="http://maps.google.co.jp/maps?ie=UTF8&q=%f,%f&ll=%f,%f&z=14" target="_blank" rel="nofollow"><img class="gps-map" src="http://maps.google.com/staticmap?center=%f,%f&zoom=14&size=%dx%d&maptype=roadmap&markers=%f,%f,red&key=%s" width="%d" height="%d" /></a>', $latlng[0], $latlng[1], $latlng[0], $latlng[1], $latlng[0], $latlng[1], $gmap_width, $gmap_height, $latlng[0], $latlng[1], $gmap_key, $gmap_width, $gmap_height);
+			}
+			
+			my $old_text = $entry->text;
+			utf8::encode($old_text) if utf8::is_utf8($old_text);
+			MT::I18N::encode_text($old_text, undef, 'utf-8');
+			utf8::decode($old_text);
+			my $new_text = "<p>$image_html</p><p>".$old_text."</p>";
+			$new_text .= "<p>$map_html</p>" if $map_html;
+			$entry->text($new_text);
+			$entry->save;
+			$app->run_callbacks('cms_post_save.entry', $app, $entry, $old_entry);
+		    }
+		} # 写真ここまで
+
+		# 動画
+		if (@$ref_movies && $self->{plugin}->use_ffmpeg($blog->id)) {
+		    require FFmpeg::Command;
+		    
+		    my $ffmpeg_path = $self->{plugin}->get_system_setting('ffmpeg_path');
+		    $self->{plugin}->log_debug("ムービー掲載が有効です。");
+		    $self->{plugin}->log_debug("FFmpeg: $ffmpeg_path");
+		    
+
+		    $entry->created_on =~ /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/;
+		    my ($year, $month, $day, $hour, $min, $sec) = ($1, $2, $3, $4, $5, $6);
+		    
+		    # 添付写真の保存
+		    # ファイルマネージャのインスタンス生成
+		    my $fmgr = MT::FileMgr->new('Local');
+		    unless ($fmgr) {
+			$self->{plugin}->log_error(MT::FileMgr->errstr);
+			next;
+		    }
+		    
+		    my $now = time;
+		    my @t = MT::Util::offset_time_list($now, $blog);
+		    for(my $i=0; $i<@$ref_movies; $i++) {
+			my $ref_movie = $ref_movies->[$i];
+			# 新しいファイル名
+			my $new_filename = sprintf("%d_%d_%d.flv", $entry->id, $now, $i);
+			# ブログルート
+			my $root_path = $blog->site_path; # サーバ内パス
+			my $root_url = $blog->site_url;   # URL
+			# 保存先
+			my $relative_dir = "ketai_post_files/".($t[5]+1900).'/'.($t[4]+1)."/".($t[3])."/";
+			my $relative_file_path = $relative_dir.$new_filename; # 相対パス
+			my $file_path = File::Spec->catfile($root_path, $relative_file_path); # サーバ内パス
+			my $dir = dirname($file_path); # ディレクトリ名
+			my $url = $root_url;
+			$url .= '/' if $url !~ m!/$!;
+			$url .= $relative_file_path; # URL
+
+			my $thumbnail_filename = sprintf("%d_%d_%d.jpg", $entry->id, $now, $i);
+			my $relative_thumbnail_path = $relative_dir.$thumbnail_filename; # 相対パス
+			my $thumbnail_path = File::Spec->catfile($root_path, $relative_thumbnail_path);
+			
+			$self->{plugin}->log_debug("file_path: $file_path\nurl: $url");
+			
+			# アップロード先ディレクトリ生成
+			unless($fmgr->exists($dir)) {
+			    unless ($fmgr->mkpath($dir)) {
+				$self->{plugin}->log_error($fmgr->errstr);
+				next;
+			    }
+			}
+
+			# 変換
+			my $temp_dir = $self->{plugin}->get_system_setting('temp_dir');
+			my $ffmpeg = FFmpeg::Command->new($ffmpeg_path);
+			$ffmpeg->timeout(300);
+
+			my($tmp_fh, $tmp_filename) = File::Temp::tempfile(
+			    'movie_XXXXXX',
+			    SUFFIX => $ref_movie->{ext},
+			     UNLINK => 1,
+			    DIR => $temp_dir
+			);
+			print $tmp_fh $ref_movie->{data};
+			close($tmp_fh);
+			my($tmpout_fh, $tmpout_filename) = File::Temp::tempfile(
+			    'movie_XXXXXX',
+			    SUFFIX => '.flv',
+			    UNLINK => 1,
+			    DIR => $temp_dir
+			);
+			close($tmpout_fh);
+			my($tmppasslog_fh, $tmppasslog_filename) = File::Temp::tempfile(
+			    'passlog_XXXXXX',
+			    SUFFIX => '.txt',
+			    UNLINK => 1,
+			    DIR => $temp_dir
+			);
+			close($tmppasslog_fh);
+
+			$ffmpeg->input_file($tmp_filename);
+			$ffmpeg->output_file($tmpout_filename);
+			$ffmpeg->options(
+			    '-y',
+			    '-an',
+			    '-r' => '15',
+			    '-b' => '600k',
+			    '-pass' => '1',
+			    '-passlogfile' => $tmppasslog_filename,
+			    '-vcodec' => 'flv',
+			    '-f' => 'flv'
+			);
+			$ffmpeg->exec();
+			$ffmpeg->options(
+			    '-y',
+			    '-ar' => '44100',
+			    '-acodec' => 'libmp3lame',
+			    '-r' => '15',
+			    '-b' => '600k',
+			    '-pass' => '2',
+			    '-passlogfile' => $tmppasslog_filename,
+			    '-vcodec' => 'flv',
+			    '-f' => 'flv'
+			);
+			$ffmpeg->exec();
+			#system("/usr/local/bin/ffmpeg -y -i $tmp_filename -an -r 15 -b 600k -pass 1 -passlogfile $tmppasslog_filename -vcodec flv -f flv $tmpout_filename && /usr/local/bin/ffmpeg -y -i $tmp_filename -ar 44100 -acodec libmp3lame -r 15 -b 600k -pass 2 -passlogfile $tmppasslog_filename -vcodec flv -f flv $tmpout_filename");
+			my($tmpthumb_fh, $tmpthumb_filename) = File::Temp::tempfile(TEMPLATE => 'image_XXXXXX.jpg');
+			close($tmpthumb_fh);
+
+			$ffmpeg->output_file($tmpthumb_filename);
+			$ffmpeg->options(
+			    '-y',
+			    '-f' => 'image2',
+			    '-vframes' => 1,
+			    '-ss' => 1,
+			    '-r' => 1,
+			    '-an',
+			    '-deinterlace'
+			);
+			$ffmpeg->exec();
+			#system("/usr/local/bin/ffmpeg -y -i $tmp_filename -f image2 -ss 1 -r 1 -an $tmpthumb_filename");
+			
+			# 保存
+			#my $bytes = $fmgr->put_data($ref_movie->{data}, $file_path, 'upload');
+			my $bytes = $fmgr->put($tmpout_filename, $file_path, 'upload');
+			unless (defined $bytes) {
+			    $self->{plugin}->log_error($fmgr->errstr);
+			    next;
+			}		    
+			$self->{plugin}->log_debug($ref_movie->{filename}." を ".$file_path." に書き込みました。");
+			
+			# アイテムの登録
+			my $asset = MT::Asset::Video->new;
+			# 情報セット
+			$asset->label($entry->title);
+			$asset->file_path($file_path);
+			$asset->file_name($new_filename);
+			$asset->file_ext($ref_movie->{ext});
+			$asset->blog_id($blog->id);
+			$asset->created_by($author->id);
+			$asset->modified_by($author->id);
+			$asset->url($url);
+			$asset->description('');
+
+			# アイテムの登録
+			unless ($asset->save) {
+			    $self->{plugin}->log_error("アイテムの登録に失敗");
+			    next;
+			}
+
+			# エントリと関連づけ
+			my $obj_asset = new MT::ObjectAsset;
+			$obj_asset->blog_id($blog->id);
+			$obj_asset->asset_id($asset->id);
+			$obj_asset->object_ds('entry');
+			$obj_asset->object_id($entry->id);
+			$obj_asset->save;
+			
+			$self->{plugin}->log_debug("アイテムを登録しました id:".$asset->id."path:$file_path url:$url");
+			
+			$bytes = $fmgr->put($tmpthumb_filename, $thumbnail_path, 'upload');
+			unless (defined $bytes) {
+			    $self->{plugin}->log_error($fmgr->errstr);
+			    next;
+			}		    
+			$self->{plugin}->log_debug($ref_movie->{filename}." を ".$file_path." に書き込みました。");
+			
+
+			my ($thumbnail_basename, $thumbnail_dir, $thumbnail_ext) = fileparse($thumbnail_path, qr/\.[^.]*/);
+			my $thumbnail_url = $root_url.File::Spec->abs2rel($thumbnail_path, $root_path);
+			$self->{plugin}->log_debug("サムネイルを作成しました。 path:$thumbnail_path url:$thumbnail_url");
+			
+			# サムネイルの登録
+			my $img = MT::Image->new( Filename => $thumbnail_path );
+			my($thumb_blob, $thumb_width, $thumb_height) = $img->scale( Scale => 100 );
+			my $thumbnail_asset = MT::Asset::Image->new;
+			$thumbnail_asset->label('Thumbnail of '.$asset->label);
+			$thumbnail_asset->file_path($thumbnail_path);
+			$thumbnail_asset->file_name($thumbnail_filename);
+			$thumbnail_asset->file_ext($thumbnail_ext);
+			$thumbnail_asset->blog_id($blog->id);
+			$thumbnail_asset->created_by($author->id);
+			$thumbnail_asset->modified_by($author->id);
+			$thumbnail_asset->url($thumbnail_url);
+			$thumbnail_asset->description('');
+			$thumbnail_asset->image_width($thumb_width);
+			$thumbnail_asset->image_height($thumb_height);
+			$thumbnail_asset->parent($asset->id); # 親の設定
+			
+			unless ($thumbnail_asset->save) {
+			    $self->{plugin}->log_error("サムネイルのアイテム登録に失敗");
+			}
+			$self->{plugin}->log_debug("サムネイルを登録しました id:".$asset->id."path:$thumbnail_path url:$thumbnail_url parent_id:".$asset->id);
+			
+			# JW Playerで表示するように記事を編集
+			my $jwplayer_url = $self->{plugin}->get_setting($blog->id, 'jwplayer_url');
+			
+			my $old_entry = $entry->clone;
+			
+			my $scale;
+			if ($thumb_width > $thumb_height) {
+			    # 長辺は幅、これがplayer_sizeで収まるように
+			    $scale = ($self->{plugin}->get_setting($blog->id, 'player_size') || 360) / $thumb_width;
+			} else {
+			    # 長辺は高さ、これがplayer_sizeで収まるように
+			    $scale = ($self->{plugin}->get_setting($blog->id, 'player_size') || 360) / $thumb_height;
 			}
 			$scale = 1.0 if $scale > 1;
-			($thumbnail_path,
-			 $thumb_width,
-			 $thumb_height) = $asset->thumbnail_file(Scale => $scale * 100,
-								 Path => $relative_dir);
-		    } else {
-			# 正方形（切り取り）
-			($thumbnail_path,
-			 $thumb_width,
-			 $thumb_height) = $asset->thumbnail_file(Square =>1,
-								 Width => $self->{plugin}->get_setting($blog->id, 'thumbnail_size'),
-								 Path => $relative_dir);
+			my ($video_basename) = fileparse($new_filename, qr/.flv/);
+			my $video_html = sprintf(<<'HTML', $jwplayer_url, $video_basename, $video_basename, $jwplayer_url, $url, $thumbnail_url, $thumb_width*$scale, $thumb_height*$scale);
+<script type="text/javascript" src="%s/jwplayer.js"></script>
+<div id="%s-container">Loading the player ...</div>
+<script type="text/javascript">
+jwplayer("%s-container").setup({
+flashplayer: "%s/player.swf",
+file: "%s",
+image: "%s",
+width: %d,
+height: %d,
+showstop: "true",
+type: "video"
+});
+</script>
+HTML
+			
+			my $old_text = $entry->text;
+			utf8::encode($old_text) if utf8::is_utf8($old_text);
+			MT::I18N::encode_text($old_text, undef, 'utf-8');
+			utf8::decode($old_text);
+			my $new_text = "<p>$video_html</p><p>".$old_text."</p>";
+			$entry->text($new_text);
+			$entry->save;
+			$app->run_callbacks('cms_post_save.entry', $app, $entry, $old_entry);
 		    }
-		    
-		    
-		    my ($thumbnail_basename, $thumbnail_dir, $thumbnail_ext) = fileparse($thumbnail_path, qr/\.[^.]*/);
-		    my $thumbnail_filename = $thumbnail_basename.$thumbnail_ext;
-		    my $thumbnail_url = $root_url.File::Spec->abs2rel($thumbnail_path, $root_path);
-		    $self->{plugin}->log_debug("サムネイルを作成しました。 path:$thumbnail_path url:$thumbnail_url");
-		    
-		    # サムネイルの登録
-		    my $thumbnail_asset = MT::Asset::Image->new;
-		    $thumbnail_asset->label('Thumbnail of '.$asset->label);
-		    $thumbnail_asset->file_path($thumbnail_path);
-		    $thumbnail_asset->file_name($thumbnail_filename);
-		    $thumbnail_asset->file_ext($thumbnail_ext);
-		    $thumbnail_asset->blog_id($blog->id);
-		    $thumbnail_asset->created_by($author->id);
-		    $thumbnail_asset->modified_by($author->id);
-		    $thumbnail_asset->url($thumbnail_url);
-		    $thumbnail_asset->description('');
-		    $thumbnail_asset->image_width($thumb_width);
-		    $thumbnail_asset->image_height($thumb_height);
-		    $thumbnail_asset->parent($asset->id); # 親の設定
-		    
-		    unless ($thumbnail_asset->save) {
-			$self->{plugin}->log_error("サムネイルのアイテム登録に失敗");
-		    }
-		    $self->{plugin}->log_debug("サムネイルを登録しました id:".$asset->id."path:$thumbnail_path url:$thumbnail_url parent_id:".$asset->id);
-		    
-		    # 写真を表示するように記事を編集
-		    my $old_entry = $entry->clone;
-
-		    my $alt = $asset->label;
-		    utf8::encode($alt) if utf8::is_utf8($alt);
-		    MT::I18N::encode_text($alt, undef, 'utf-8');
-		    utf8::decode($alt);
-		    my $image_html = sprintf('<a href="%s" target="_blank"><img src="%s" width="%d" height="%d" alt="%s" /></a>',
-					     $url, $thumbnail_url, $thumb_width, $thumb_height, $alt);
-
-		    my $map_html;
-		    if (@latlng == 2) {
-			my $gmap_key = $self->{plugin}->get_setting($blog->id, 'gmap_key');
-			my ($gmap_width, $gmap_height) = (
-			    $self->{plugin}->get_setting($blog->id, 'gmap_width') || 360,
-			    $self->{plugin}->get_setting($blog->id, 'gmap_height') || 240,
-			);
-			$map_html = sprintf('<a href="http://maps.google.co.jp/maps?ie=UTF8&q=%f,%f&ll=%f,%f&z=14" target="_blank" rel="nofollow"><img class="gps-map" src="http://maps.google.com/staticmap?center=%f,%f&zoom=14&size=%dx%d&maptype=roadmap&markers=%f,%f,red&key=%s" width="%d" height="%d" /></a>', $latlng[0], $latlng[1], $latlng[0], $latlng[1], $latlng[0], $latlng[1], $gmap_width, $gmap_height, $latlng[0], $latlng[1], $gmap_key, $gmap_width, $gmap_height);
-		    }
-		    
-		    my $old_text = $entry->text;
-		    utf8::encode($old_text) if utf8::is_utf8($old_text);
-		    MT::I18N::encode_text($old_text, undef, 'utf-8');
-		    utf8::decode($old_text);
-		    my $new_text = "<p>$image_html</p><p>".$old_text."</p>";
-		    $new_text .= "<p>$map_html</p>" if $map_html;
-		    $entry->text($new_text);
-		    $entry->save;
-		    $app->run_callbacks('cms_post_save.entry', $app, $entry, $old_entry);
-		}
+		} # 動画ここまで
 	    }
 	    
 	};
@@ -409,7 +650,13 @@ sub build_attributes {
     require KetaiPost::Emoji if ($self->{plugin}->use_emoji);
 
     my $cfg = MT::ConfigMgr->instance;
-    my @imagetype = ('.jpg','.jpeg', '.gif','.png');
+    my %imagetypes = ('image/pjpeg' => '.jpg',
+		      'image/jpeg' => '.jpg',
+		      'image/gif' => '.gif',
+		      'image/png' => '.png');
+    my %movietypes = ('video/3gpp2' => '.3gp',
+		      'video/3gpp' => '.3gp',
+		      'video/mp4' => '.mp4');
 
     my $head = $entity->head;
 
@@ -502,6 +749,7 @@ sub build_attributes {
     my ($text, $text_charset);
     
     my @images;
+    my @movies;
 
     unless ($entity->is_multipart) {
 	$text = $entity->bodyhandle->as_string;
@@ -514,6 +762,9 @@ sub build_attributes {
 	    my $part = $entity->parts($i);
 	    next unless $part->bodyhandle;
 	    my $type = $part->mime_type;
+
+	    $self->{plugin}->log_debug("part: $type found.");
+
 	    if ($type =~ /text\/plain/) {
 		#本文
 		$text = $part->bodyhandle->as_string;
@@ -524,8 +775,10 @@ sub build_attributes {
 		my $path = $part->bodyhandle->path;
 		#ファイル名を取り出し
 		my $fname = (fileparse($path))[0];
-		foreach my $type(@imagetype){
-		    if($fname =~ /$type$/i){#認められた形式の画像ファイルか
+		# 画像ファイル取りだし
+		foreach my $imagetype(keys(%imagetypes)){
+		    my $extname = $imagetypes{$imagetype};
+		    if($type =~ /$imagetype/i){#認められた形式の画像ファイルか
 			my $data;
 
 			# 容量制限
@@ -541,11 +794,36 @@ sub build_attributes {
 			my $ref_image = {
 			    data => $data,
 			    filename => $fname,
-			    ext => $type
+			    ext => $extname
 			};
 			push(@images, $ref_image);
 		    }
 		}
+
+		# 動画ファイル取り出し
+		foreach my $movietype(keys(%movietypes)){
+		    my $extname = $movietypes{$movietype};
+		    if($type =~ m|$movietype|i){
+			my $data;
+
+			# 容量制限
+			my $handle = $part->bodyhandle;
+			my $io = $handle->open("r");
+			my $bytes = $io->read($data, $maxbytes + 1);
+			$io->close;
+			if($bytes > $maxbytes) {
+			    $self->{plugin}->log_error("添付ファイルのサイズが大きすぎます。スキップしました。（最大 $maxbytes Bytes）");
+			    next;
+			}
+			my $ref_movie = {
+			    data => $data,
+			    filename => $fname,
+			    ext => $extname
+			};
+			push(@movies, $ref_movie);
+		    }
+		}
+
 	    }
 	}
     }
@@ -572,7 +850,8 @@ sub build_attributes {
 	#time => $witten_time,
 	subject => $subject,
 	text => $text,
-	images => \@images
+	images => \@images,
+	movies => \@movies
     };
 
     return $ref_data;

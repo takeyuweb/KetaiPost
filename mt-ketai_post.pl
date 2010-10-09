@@ -124,8 +124,8 @@ my $plugin = MT::Plugin::KetaiPost->new({
         tasks =>  {
             'KetaiPost' => {
                 label     => 'KetaiPost',
-                frequency => 1 * 60 * 5,
-		# frequency => 1,
+                #frequency => 1 * 60 * 5,
+		 frequency => 1,
                 code      => \&do_ketai_post,
             },
         },
@@ -486,7 +486,8 @@ sub system_config_template {
     <input type="text" name="ffmpeg_path" value="<mt:var name="ffmpeg_path" encode_html="1" />" class="full-width" /><br />
     ムービーファイルの変換に使用します。<br />
     共有サーバ等で変換による過負荷でプロセスがkillされてしまう場合はniceコマンドを併用してください。<br />
-    例）nice +19 /usr/bin/ffmpeg
+    例）nice -n 19 /usr/bin/ffmpeg<br />
+    なお、niceコマンドの書式は環境によって違うことがあるので注意してください。<br />
   </mtapp:setting>
   <mtapp:setting id="temp_dir" label="変換テンポラリディレクトリ:">
     <input type="text" name="temp_dir" value="<mt:var name="temp_dir" encode_html="1" />" class="full-width" /><br />

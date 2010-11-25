@@ -7,9 +7,9 @@
 <mt:setVarBlock name="jq_js_include">
   jQuery.mtCheckbox();
   
-  $('button.mt-delete-mailboxes').each(function() {
-    $(this).click(function() {
-      var count = countMarked($('#mailbox-listing-form')[0]);
+  jQuery('button.mt-delete-mailboxes').each(function() {
+    jQuery(this).click(function() {
+      var count = countMarked(jQuery('#mailbox-listing-form')[0]);
       if (!count) {
         alert("削除する送信先メールアドレスが選択されていません。");
         return false;
@@ -18,9 +18,9 @@
     });
   });
 
-  $('button.mt-delete-authors').each(function() {
-    $(this).click(function() {
-      var count = countMarked($('#author-listing-form')[0]);
+  jQuery('button.mt-delete-authors').each(function() {
+    jQuery(this).click(function() {
+      var count = countMarked(jQuery('#author-listing-form')[0]);
       if (!count) {
         alert("削除する送信元ユーザーが選択されていません。");
         return false;

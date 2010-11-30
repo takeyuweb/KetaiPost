@@ -11,7 +11,7 @@ use base qw( MT::Plugin );
 
 use vars qw($PLUGIN_NAME $VERSION);
 $PLUGIN_NAME = 'KetaiPost';
-$VERSION = '0.3.1';
+$VERSION = '0.3.2';
 
 use KetaiPost::MailBox;
 use KetaiPost::Author;
@@ -124,8 +124,8 @@ my $plugin = MT::Plugin::KetaiPost->new({
         tasks =>  {
             'KetaiPost' => {
                 label     => 'KetaiPost',
-                #frequency => 1 * 60 * 5,
-		 frequency => 1,
+                frequency => 1 * 60 * 5,
+		# frequency => 1,
                 code      => \&do_ketai_post,
             },
         },

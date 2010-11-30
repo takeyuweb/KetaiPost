@@ -711,6 +711,9 @@ sub build_attributes {
     my @images;
     my @movies;
 
+    # TODO
+    # パート毎に適切な文字コード変換を行ってから連結するように
+
     unless ($entity->is_multipart) {
 	$text = $entity->bodyhandle->as_string;
 	$text_charset = $1 if $head->get('Content-Type') =~ /charset="?([\w_-]+)"?/i;
@@ -724,10 +727,9 @@ sub build_attributes {
 	    my $type = $part->mime_type;
 
 	    $self->{plugin}->log_debug("part: $type found.");
-
 	    if ($type =~ /text\/plain/) {
 		#本文
-		$text = $part->bodyhandle->as_string;
+		$text .= $part->bodyhandle->as_string;
 		$text_charset = $1 if $part->head->get('Content-Type') =~ /charset="?([\w_-]+)"?/i;
 	    } else {
 		#添付

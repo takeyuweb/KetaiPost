@@ -130,8 +130,8 @@ my $plugin = MT::Plugin::KetaiPost->new({
         tasks =>  {
             'KetaiPost' => {
                 label     => 'KetaiPost',
-                #frequency => 1 * 60 * 5,
-                frequency => 1,
+                frequency => 1 * 60 * 5,
+                #frequency => 1,
                 code      => \&do_ketai_post,
             },
         },

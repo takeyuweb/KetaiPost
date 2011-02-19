@@ -1,0 +1,95 @@
+<!--
+<mtapp:setting id="geo" label="GPS位置情報:">
+  <mtapp:setting id="use_latlng" label="GPS位置情報:">
+    <mt:if name="use_latlng" eq="2">
+      <input type="radio" id="use_latlng_2" name="use_latlng" value="2" checked="checked" /><label for="use_latlng_2">する</label>&nbsp;
+      <input type="radio" id="use_latlng_1" name="use_latlng" value="1" /><label for="use_latlng_1">しない</label>&nbsp;
+      <input type="radio" id="use_latlng_0" name="use_latlng" value="0" /><label for="use_latlng_0">親の設定を継承</label><br />
+      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
+    </mt:if>
+    <mt:if name="use_latlng" eq="1">
+      <input type="radio" id="use_latlng_2" name="use_latlng" value="2" /><label for="use_latlng_2">する</label>&nbsp;
+      <input type="radio" id="use_latlng_1" name="use_latlng" value="1" checked="checked" /><label for="use_latlng_1">しない</label>&nbsp;
+      <input type="radio" id="use_latlng_0" name="use_latlng" value="0" /><label for="use_latlng_0">親の設定を継承</label><br />
+      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
+    </mt:if>
+    <mt:unless name="use_latlng">
+      <input type="radio" id="use_latlng_2" name="use_latlng" value="2" /><label for="use_latlng_2">する</label>&nbsp;
+      <input type="radio" id="use_latlng_1" name="use_latlng" value="1" /><label for="use_latlng_1">しない</label>&nbsp;
+      <input type="radio" id="use_latlng_0" name="use_latlng" value="0" checked="checked" /><label for="use_latlng_0">親の設定を継承</label><br />
+      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
+    </mt:unless>
+  </mtapp:setting>
+  <mtapp:setting id="gmap_key" label="Google Map API Key:">
+    <input type="text" name="gmap_key" value="<mt:var name="gmap_key" encode_html="1" />" class="full-width" /><br />
+    地図の表示に使用します。<br />
+    空白の場合は、ブログ -> ウェブサイト -> システム の優先度で利用します。
+  </mtapp:setting>
+  <mtapp:setting id="gmap_size" label="地図のサイズ:">
+    <input type="text" name="gmap_width" value="<mt:var name="gmap_width" encode_html="1" />" style="width: 50px;" /> × <input type="text" name="gmap_height" value="<mt:var name="gmap_height" encode_html="1" />" style="width: 50px;" /><br />
+  空白または0場合は、ブログ -> ウェブサイト -> システム の優先度で利用します。
+  </mtapp:setting>
+</mtapp:setting>
+-->
+<mtapp:setting id="movie" label="ムービー:">
+  <mtapp:setting id="use_ffmpeg" label="掲載:">
+    <mt:if name="use_ffmpeg" eq="2">
+      <input type="radio" id="use_ffmpeg_2" name="use_ffmpeg" value="2" checked="checked" /><label for="use_ffmpeg_2">する</label>&nbsp;
+      <input type="radio" id="use_ffmpeg_1" name="use_ffmpeg" value="1" /><label for="use_ffmpeg_1">しない</label>&nbsp;
+      <input type="radio" id="use_ffmpeg_0" name="use_ffmpeg" value="0" /><label for="use_ffmpeg_0">親の設定を継承</label><br />
+      「する」に設定すると、メールに添付された動画ファイルをFLVに変換しブログに掲載します。（ffmpegが必要）
+    </mt:if>
+    <mt:if name="use_ffmpeg" eq="1">
+      <input type="radio" id="use_ffmpeg_2" name="use_ffmpeg" value="2" /><label for="use_ffmpeg_2">する</label>&nbsp;
+      <input type="radio" id="use_ffmpeg_1" name="use_ffmpeg" value="1" checked="checked" /><label for="use_ffmpeg_1">しない</label>&nbsp;
+      <input type="radio" id="use_ffmpeg_0" name="use_ffmpeg" value="0" /><label for="use_ffmpeg_0">親の設定を継承</label><br />
+      「する」に設定すると、メールに添付された動画ファイルをFLVに変換しブログに掲載します。（ffmpegが必要）
+    </mt:if>
+    <mt:unless name="use_ffmpeg">
+      <input type="radio" id="use_ffmpeg_2" name="use_ffmpeg" value="2" /><label for="use_ffmpeg_2">する</label>&nbsp;
+      <input type="radio" id="use_ffmpeg_1" name="use_ffmpeg" value="1" /><label for="use_ffmpeg_1">しない</label>&nbsp;
+      <input type="radio" id="use_ffmpeg_0" name="use_ffmpeg" value="0" checked="checked" /><label for="use_ffmpeg_0">親の設定を継承</label><br />
+      「する」に設定すると、メールに添付された動画ファイルをFLVに変換しブログに掲載します。（ffmpegが必要）<br />
+       利用する場合は、システムの設定で別途「ffmpegコマンドのパス」を設定してください。
+    </mt:unless>
+  </mtapp:setting>
+  <mtapp:setting id="jwplayer_url" label="JW PlayerのURL:">
+    <input type="text" name="jwplayer_url" value="<mt:var name="jwplayer_url" encode_html="1" />" class="full-width" /><br />
+    JW Player(player.swf/jwplayer.js)を配置したディレクトリのURL<br />
+    空白の場合は、ブログ -> ウェブサイト -> システム の優先度で利用します。
+  </mtapp:setting>
+  <mtapp:setting id="player_size" label="プレイヤーの横幅:">
+    <input type="text" name="player_size" value="<mt:var name="player_size" encode_html="1" />" style="width: 50px;" /> ピクセル
+  </mtapp:setting>
+</mtapp:setting>
+<mtapp:setting id="thumbnail_shape" label="サムネイルの形状:">
+  <mt:if name="thumbnail_shape" eq="2">
+    <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" checked="checked" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
+    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" /><label for="thumbnail_shape_1">縦横比率を維持して縮小</label>&nbsp;
+    <input type="radio" id="thumbnail_shape_0" name="thumbnail_shape" value="0" /><label for="thumbnail_shape_0">親の設定を継承</label>
+  </mt:if>
+  <mt:if name="thumbnail_shape" eq="1">
+    <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
+    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" checked="checked" /><label for="thumbnail_shape_1">縦横比率を維持して縮小</label>&nbsp;
+    <input type="radio" id="thumbnail_shape_0" name="thumbnail_shape" value="0" /><label for="thumbnail_shape_0">親の設定を継承</label>
+  </mt:if>
+  <mt:unless name="thumbnail_shape">
+    <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
+    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" /><label for="thumbnail_shape_1">縦横比率を維持して縮小</label>&nbsp;
+    <input type="radio" id="thumbnail_shape_0" name="thumbnail_shape" value="0" checked="checked" /><label for="thumbnail_shape_0">親の設定を継承</label>
+  </mt:unless>
+</mtapp:setting>
+<mtapp:setting id="thumbnail_size" label="サムネイルの横幅:">
+  <input type="text" name="thumbnail_size" value="<mt:var name="thumbnail_size" encode_html="1" />" style="width: 50px;" /> ピクセル<br />
+  空白または0の場合は、ブログ -> ウェブサイト -> システム の優先度で利用します。
+</mtapp:setting>
+<mtapp:setting id="default_subject" label="デフォルトの記事タイトル:">
+  <input type="text" name="default_subject" value="<mt:var name="default_subject" encode_html="1" />" class="full-width" /><br />
+  空白の場合は、ブログ -> ウェブサイト -> システム の優先度で利用します。
+</mtapp:setting>
+<mtapp:setting id="entry_text_template_id" label="記事テンプレート:">
+  [select_entry_text_template_id]<br />
+  掲載される記事の書式（レイアウト）をカスタマイズできます。<br />
+  <a href="?__mode=list_template#module">テンプレートモジュール</a>としてテンプレートを作成し、ここで選択して下さい。<br />
+  「親の設定を継承」の場合は、ブログ -> ウェブサイト -> システム の優先度で利用します。
+</mtapp:setting>

@@ -11,7 +11,7 @@ use base qw( MT::Plugin );
 
 use vars qw($PLUGIN_NAME $VERSION);
 $PLUGIN_NAME = 'KetaiPost';
-$VERSION = '0.3.2';
+$VERSION = '0.4.0';
 
 use KetaiPost::MailBox;
 use KetaiPost::Author;
@@ -29,23 +29,23 @@ sub plugin_description {
     push(@lines, '依存モジュール：');
     push(@lines, '<ul>');
     my $ref_modules = [
-	['Mail::POP3Client', 0, 'メールの受信に必要です。'],
-	['MIME::Tools', 0, 'メールの解析に必要です。'],
-	['IO::Socket::SSL', 1, 'SSLを使ったメールの受信（Gmailなど）に必要です。'],
-	['Encode::MIME::Header::ISO_2022_JP', 1, 'メールのデコードに使用します。'],
-	['Image::ExifTool', 1, '一部の携帯電話が送信する写真の向きを補正するために使用します。<br />また、写真からGPS位置情報を抽出するのにも使用します。'],
-	['Image::Magick', 1, '一部の携帯電話が送信する写真の向きを補正するために使用します。'],
-	['Encode::JP::Emoji', 1, '絵文字変換に利用します。'],
-	['Encode::JP::Emoji::FB_EMOJI_TYPECAST', 1, '絵文字変換に利用します。']
+        ['Mail::POP3Client', 0, 'メールの受信に必要です。'],
+        ['MIME::Tools', 0, 'メールの解析に必要です。'],
+        ['IO::Socket::SSL', 1, 'SSLを使ったメールの受信（Gmailなど）に必要です。'],
+        ['Encode::MIME::Header::ISO_2022_JP', 1, 'メールのデコードに使用します。'],
+        ['Image::ExifTool', 1, '一部の携帯電話が送信する写真の向きを補正するために使用します。<br />また、写真からGPS位置情報を抽出するのにも使用します。'],
+        ['Image::Magick', 1, '一部の携帯電話が送信する写真の向きを補正するために使用します。'],
+        ['Encode::JP::Emoji', 1, '絵文字変換に利用します。'],
+        ['Encode::JP::Emoji::FB_EMOJI_TYPECAST', 1, '絵文字変換に利用します。']
     ];
     foreach my $ref_option(@$ref_modules) {
-	my $name = $ref_option->[0];
-	my $line = "<li>";
-	$line .= "$name => 利用".(&exist_module($name) ? 'できます' : 'できません');
-	$line .= "(Optional)" if $ref_option->[1];
-	$line .= "<br />".$ref_option->[2] if $ref_option->[2];
-	$line .= "</li>";
-	push(@lines, $line);
+        my $name = $ref_option->[0];
+        my $line = "<li>";
+        $line .= "$name => 利用".(&exist_module($name) ? 'できます' : 'できません');
+        $line .= "(Optional)" if $ref_option->[1];
+        $line .= "<br />".$ref_option->[2] if $ref_option->[2];
+        $line .= "</li>";
+        push(@lines, $line);
     }
     push(@lines, '</ul>');
     push(@lines, '</div>');
@@ -66,93 +66,110 @@ my $plugin = MT::Plugin::KetaiPost->new({
     schema_version => 0.03,
     object_classes => [ 'KetaiPost::MailBox', 'KetaiPost::Author' ],
     settings => new MT::PluginSettings([
-	# ここから、位置情報に関する設定
-	# 位置情報を使う
-	# 0 継承
-	# 1 使わない
-	# 2 使う（地図を表示）
-	['use_latlng', { Scope => 'blog', Default => 0 }],
-	['use_latlng', { Scope => 'system', Default => 1 }],
-	# Google Map API Key
-	['gmap_key', { Scope => 'blog', Default => '' }],
-	['gmap_key', { Scope => 'system', Default => '' }],
-	# 地図の大きさ (XXX,YYY)
-	['gmap_width', { Scope => 'blog', Default => 0 }],
-	['gmap_width', { Scope => 'system', Default => 360 }],
-	['gmap_height', { Scope => 'blog', Default => 0 }],
-	['gmap_height', { Scope => 'system', Default => 240 }],
-	# 位置情報に関する設定ここまで
-	# サムネイルの形状
-	# 0 継承
-	# 1 そのまま縮小
-	# 2 正方形（切り取り）
-	['thumbnail_shape', { Scope => 'blog', Default => 0 }],
-	['thumbnail_shape', { Scope => 'system', Default => 1 }],
-	# サムネイルの長辺サイズ
-	['thumbnail_size', { Scope => 'blog', Default => 240 }],
-	['thumbnail_size', { Scope => 'system', Default => 240 }],
-	# タイトル無し
-	['default_subject', { Scope => 'blog', Default => '' }],
-	['default_subject', { Scope => 'system', Default => '無題' }],
-	# デバッグ用ログを出力
+        # ここから、位置情報に関する設定
+        # 位置情報を使う
+        # 0 継承
+        # 1 使わない
+        # 2 使う（地図を表示）
+        ['use_latlng', { Scope => 'blog', Default => 0 }],
+        ['use_latlng', { Scope => 'system', Default => 1 }],
+        # Google Map API Key
+        ['gmap_key', { Scope => 'blog', Default => '' }],
+        ['gmap_key', { Scope => 'system', Default => '' }],
+        # 地図の大きさ (XXX,YYY)
+        ['gmap_width', { Scope => 'blog', Default => 0 }],
+        ['gmap_width', { Scope => 'system', Default => 360 }],
+        ['gmap_height', { Scope => 'blog', Default => 0 }],
+        ['gmap_height', { Scope => 'system', Default => 240 }],
+        # 位置情報に関する設定ここまで
+        # サムネイルの形状
+        # 0 継承
+        # 1 そのまま縮小
+        # 2 正方形（切り取り）
+        ['thumbnail_shape', { Scope => 'blog', Default => 0 }],
+        ['thumbnail_shape', { Scope => 'system', Default => 1 }],
+        # サムネイルの横幅
+        ['thumbnail_size', { Scope => 'blog', Default => 240 }],
+        ['thumbnail_size', { Scope => 'system', Default => 240 }],
+        # タイトル無し
+        ['default_subject', { Scope => 'blog', Default => '' }],
+        ['default_subject', { Scope => 'system', Default => '無題' }],
+        # デバッグ用ログを出力
         ['use_debuglog', { Scope => 'system', Default => 0 }],
-	# 削除フラグを立てない（テスト用）
-	['disable_delete_flag', { Scope => 'system', Default => 0 }],
-	# 動画掲載
-	# 0 : 設定を継承
-	# 1 : 利用しない
-	# 2 : 利用する
-	['use_ffmpeg', { Scope => 'blog', Default => 0 }],
-	['use_ffmpeg', { Scope => 'system', Default => 1 }],
-	# FFmpegのパス
-	['ffmpeg_path', { Scope => 'system', Default => '' }],
-	# 一時ファイル置き場
-	['temp_dir', { Scope => 'system', Default => '/tmp' }],
-	# プレイヤー
-	['jwplayer_url', { Scope => 'blog', Default => '' }],
-	['jwplayer_url', { Scope => 'system', Default => '/jwplayer/' }],
-	['player_size', { Scope => 'blog', Default => 360 }],
-	['player_size', { Scope => 'system', Default => 360 }],
+        # 削除フラグを立てない（テスト用）
+        ['disable_delete_flag', { Scope => 'system', Default => 0 }],
+        # 動画掲載
+        # 0 : 設定を継承
+        # 1 : 利用しない
+        # 2 : 利用する
+        ['use_ffmpeg', { Scope => 'blog', Default => 0 }],
+        ['use_ffmpeg', { Scope => 'system', Default => 1 }],
+        # FFmpegのパス
+        ['ffmpeg_path', { Scope => 'system', Default => '' }],
+        # 一時ファイル置き場
+        ['temp_dir', { Scope => 'system', Default => '/tmp' }],
+        # プレイヤーの横幅
+        ['jwplayer_url', { Scope => 'blog', Default => '' }],
+        ['jwplayer_url', { Scope => 'system', Default => '/jwplayer/' }],
+        ['player_size', { Scope => 'blog', Default => 360 }],
+        ['player_size', { Scope => 'system', Default => 360 }],
+        # 記事テンプレート
+        # -1 : デフォルトのテンプレート（tmpl/entry.tmpl）
+        # 0  : 設定を継承
+        # 1～ : テンプレートID
+        ['entry_text_template_id', { Scope => 'blog', Default => -2 }],
+        ['entry_text_template_id', { Scope => 'system', Default => -1 }],
     ]),
-    blog_config_template => \&blog_config_template,
-    system_config_template => \&system_config_template,
+    blog_config_template => 'ketaipost_config.tmpl',
+    system_config_template => 'ketaipost_sysconfig.tmpl',
     registry => {
         object_types => {
             'ketaipost_mailbox' => 'KetaiPost::MailBox',
-	    'ketaipost_author' => 'KetaiPost::Author'
+            'ketaipost_author' => 'KetaiPost::Author'
         },
         tasks =>  {
             'KetaiPost' => {
                 label     => 'KetaiPost',
-                frequency => 1 * 60 * 5,
-		# frequency => 1,
+                #frequency => 1 * 60 * 5,
+                frequency => 1,
                 code      => \&do_ketai_post,
             },
         },
-	# 管理画面
-	applications => {
-	    cms => {
-		menus => {
-		    'settings:list_ketaipost' => {
-			label => 'KetaiPost',
-			order => 10100,
-			mode => 'list_ketaipost',
-			view => 'system',
-			system_permission => "administer",
-		    }
-		},
-		methods => {
-		    list_ketaipost => '$ketaipost::KetaiPost::CMS::list_ketaipost',
-		    select_ketaipost_blog => '$ketaipost::KetaiPost::CMS::select_ketaipost_blog',
-		    edit_ketaipost_mailbox => '$ketaipost::KetaiPost::CMS::edit_ketaipost_mailbox',
-		    save_ketaipost_mailbox => '$ketaipost::KetaiPost::CMS::save_ketaipost_mailbox',
-		    delete_ketaipost_mailbox => '$ketaipost::KetaiPost::CMS::delete_ketaipost_mailbox',
-		    edit_ketaipost_author => '$ketaipost::KetaiPost::CMS::edit_ketaipost_author',
-		    save_ketaipost_author => '$ketaipost::KetaiPost::CMS::save_ketaipost_author',
-		    delete_ketaipost_author => '$ketaipost::KetaiPost::CMS::delete_ketaipost_author',
-		}
-	    }
-	}
+        tags => {
+            function => {
+                'EntryKetaiPostVideo'
+                    => '$ketaipost::KetaiPost::Tags::_hdlr_entry_ketai_post_video',
+            },
+        },
+        callbacks => {
+            'MT::App::CMS::template_source.ketaipost_config' =>
+                '$ketaipost::KetaiPost::Callbacks::_cb_tmpl_source_ketaipost_config',
+            'MT::App::CMS::template_source.ketaipost_sysconfig' =>
+                '$ketaipost::KetaiPost::Callbacks::_cb_tmpl_source_ketaipost_sysconfig',
+        },
+        applications => {
+            cms => {
+                menus => {
+                    'settings:list_ketaipost' => {
+                        label => 'KetaiPost',
+                        order => 10100,
+                        mode => 'list_ketaipost',
+                        view => 'system',
+                        system_permission => "administer",
+                    }
+                },
+                methods => {
+                    list_ketaipost => '$ketaipost::KetaiPost::CMS::list_ketaipost',
+                    select_ketaipost_blog => '$ketaipost::KetaiPost::CMS::select_ketaipost_blog',
+                    edit_ketaipost_mailbox => '$ketaipost::KetaiPost::CMS::edit_ketaipost_mailbox',
+                    save_ketaipost_mailbox => '$ketaipost::KetaiPost::CMS::save_ketaipost_mailbox',
+                    delete_ketaipost_mailbox => '$ketaipost::KetaiPost::CMS::delete_ketaipost_mailbox',
+                    edit_ketaipost_author => '$ketaipost::KetaiPost::CMS::edit_ketaipost_author',
+                    save_ketaipost_author => '$ketaipost::KetaiPost::CMS::save_ketaipost_author',
+                    delete_ketaipost_author => '$ketaipost::KetaiPost::CMS::delete_ketaipost_author',
+                }
+            }
+        }
     },
 });
 
@@ -169,9 +186,9 @@ sub use_exiftool {
 
     eval { require Image::ExifTool; };
     if ($@) {
-	$self->{use_exiftool} = 0;
+    $self->{use_exiftool} = 0;
     } else {
-	$self->{use_exiftool} = 1;
+    $self->{use_exiftool} = 1;
     }
     $self->{use_exiftool};
 }
@@ -182,9 +199,9 @@ sub use_magick {
 
     eval { require Image::Magick; };
     if ($@) {
-	$self->{use_magick} = 0;
+    $self->{use_magick} = 0;
     } else {
-	$self->{use_magick} = 1;
+    $self->{use_magick} = 1;
     }
     $self->{use_magick};
 }
@@ -194,9 +211,8 @@ sub use_magick {
 sub use_gmap {
     my $self = shift;
     my ($blog_id) = @_;
-    $self->use_exiftool &&
-      ($self->get_setting($blog_id, 'use_latlng') == 2) &&
-	$self->get_setting($blog_id, 'gmap_key');
+    my $use_latlng = $self->get_setting($blog_id, 'use_latlng');
+    $self->use_exiftool && defined $use_latlng && $use_latlng == 2 && $self->get_setting($blog_id, 'gmap_key');
 }
 
 # 絵文字変換機能を利用できるか
@@ -206,12 +222,12 @@ sub use_emoji {
     return $self->{use_emoji} if defined($self->{use_emoji});
 
     eval {
-	require KetaiPost::Emoji;
+    require KetaiPost::Emoji;
     };
     if ($@) {
-	$self->{use_emoji} = 0;
+    $self->{use_emoji} = 0;
     } else {
-	$self->{use_emoji} = 1;
+    $self->{use_emoji} = 1;
     }
     $self->{use_emoji};
 }
@@ -223,13 +239,13 @@ sub use_ffmpeg {
 
     my $path;
     if($self->get_system_setting('ffmpeg_path') =~ /(\S+)\s*$/) {
-	$path = $1;
+    $path = $1;
     }
 
     if (-f $path && $self->get_setting($blog_id, 'use_ffmpeg') == 2) {
-	$self->{use_ffmpeg} = 1;
+    $self->{use_ffmpeg} = 1;
     } else {
-	$self->{use_ffmpeg} = 0;
+    $self->{use_ffmpeg} = 0;
     }
     $self->{use_ffmpeg};
 }
@@ -288,9 +304,9 @@ sub get_setting {
     my $website_value = $self->get_website_setting($blog_id, $key);
     my $value = $self->get_blog_setting($blog_id, $key);
     if ($value) {
-	return $value;
+        return $value;
     } elsif (defined($website_value)) {
-	return $website_value || $self->get_system_setting($key);;
+        return $website_value || $self->get_system_setting($key);;
     }
     $self->get_system_setting($key);
 }
@@ -304,7 +320,7 @@ sub write_log {
 
     $ref_options ||= {};
     my $ref_default_options = {
-	level => MT::Log::INFO,
+    level => MT::Log::INFO,
     };
 
     $ref_options = {%{$ref_default_options}, %{$ref_options}};
@@ -328,7 +344,7 @@ sub log_debug {
     
     $ref_options ||= {};
     my $ref_default_options = {
-	level => MT::Log::DEBUG,
+    level => MT::Log::DEBUG,
     };
     $ref_options = {%{$ref_default_options}, %{$ref_options}};
 
@@ -342,199 +358,11 @@ sub log_error {
     
     $ref_options ||= {};
     my $ref_default_options = {
-	level => MT::Log::ERROR,
+    level => MT::Log::ERROR,
     };
     $ref_options = {%{$ref_default_options}, %{$ref_options}};
 
     $self->write_log('[error]'.$msg, $ref_options);
-}
-
-sub blog_config_template {
-    my $tmpl = <<'EOT';
-<mtapp:setting id="geo" label="GPS位置情報:">
-  <mtapp:setting id="use_latlng" label="GPS位置情報:">
-    <mt:if name="use_latlng" eq="2">
-      <input type="radio" id="use_latlng_2" name="use_latlng" value="2" checked="checked" /><label for="use_latlng_2">する</label>&nbsp;
-      <input type="radio" id="use_latlng_1" name="use_latlng" value="1" /><label for="use_latlng_1">しない</label>&nbsp;
-      <input type="radio" id="use_latlng_0" name="use_latlng" value="0" /><label for="use_latlng_0">親の設定を継承</label><br />
-      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
-    </mt:if>
-    <mt:if name="use_latlng" eq="1">
-      <input type="radio" id="use_latlng_2" name="use_latlng" value="2" /><label for="use_latlng_2">する</label>&nbsp;
-      <input type="radio" id="use_latlng_1" name="use_latlng" value="1" checked="checked" /><label for="use_latlng_1">しない</label>&nbsp;
-      <input type="radio" id="use_latlng_0" name="use_latlng" value="0" /><label for="use_latlng_0">親の設定を継承</label><br />
-      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
-    </mt:if>
-    <mt:unless name="use_latlng">
-      <input type="radio" id="use_latlng_2" name="use_latlng" value="2" /><label for="use_latlng_2">する</label>&nbsp;
-      <input type="radio" id="use_latlng_1" name="use_latlng" value="1" /><label for="use_latlng_1">しない</label>&nbsp;
-      <input type="radio" id="use_latlng_0" name="use_latlng" value="0" checked="checked" /><label for="use_latlng_0">親の設定を継承</label><br />
-      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
-    </mt:unless>
-  </mtapp:setting>
-  <mtapp:setting id="gmap_key" label="Google Map API Key:">
-    <input type="text" name="gmap_key" value="<mt:var name="gmap_key" encode_html="1" />" class="full-width" /><br />
-    地図の表示に使用します。<br />
-    空白の場合は、ブログ -> ウェブサイト -> システム の優先度で利用します。
-  </mtapp:setting>
-  <mtapp:setting id="gmap_size" label="地図のサイズ:">
-    <input type="text" name="gmap_width" value="<mt:var name="gmap_width" encode_html="1" />" style="width: 50px;" /> × <input type="text" name="gmap_height" value="<mt:var name="gmap_height" encode_html="1" />" style="width: 50px;" /><br />
-  空白または0場合は、ブログ -> ウェブサイト -> システム の優先度で利用します。
-  </mtapp:setting>
-</mtapp:setting>
-<mtapp:setting id="movie" label="ムービー:">
-  <mtapp:setting id="use_ffmpeg" label="掲載:">
-    <mt:if name="use_ffmpeg" eq="2">
-      <input type="radio" id="use_ffmpeg_2" name="use_ffmpeg" value="2" checked="checked" /><label for="use_ffmpeg_2">する</label>&nbsp;
-      <input type="radio" id="use_ffmpeg_1" name="use_ffmpeg" value="1" /><label for="use_ffmpeg_1">しない</label>&nbsp;
-      <input type="radio" id="use_ffmpeg_0" name="use_ffmpeg" value="0" /><label for="use_ffmpeg_0">親の設定を継承</label><br />
-      「する」に設定すると、メールに添付された動画ファイルをFLVに変換しブログに掲載します。（ffmpegが必要）
-    </mt:if>
-    <mt:if name="use_ffmpeg" eq="1">
-      <input type="radio" id="use_ffmpeg_2" name="use_ffmpeg" value="2" /><label for="use_ffmpeg_2">する</label>&nbsp;
-      <input type="radio" id="use_ffmpeg_1" name="use_ffmpeg" value="1" checked="checked" /><label for="use_ffmpeg_1">しない</label>&nbsp;
-      <input type="radio" id="use_ffmpeg_0" name="use_ffmpeg" value="0" /><label for="use_ffmpeg_0">親の設定を継承</label><br />
-      「する」に設定すると、メールに添付された動画ファイルをFLVに変換しブログに掲載します。（ffmpegが必要）
-    </mt:if>
-    <mt:unless name="use_ffmpeg">
-      <input type="radio" id="use_ffmpeg_2" name="use_ffmpeg" value="2" /><label for="use_ffmpeg_2">する</label>&nbsp;
-      <input type="radio" id="use_ffmpeg_1" name="use_ffmpeg" value="1" /><label for="use_ffmpeg_1">しない</label>&nbsp;
-      <input type="radio" id="use_ffmpeg_0" name="use_ffmpeg" value="0" checked="checked" /><label for="use_ffmpeg_0">親の設定を継承</label><br />
-      「する」に設定すると、メールに添付された動画ファイルをFLVに変換しブログに掲載します。（ffmpegが必要）<br />
-       利用する場合は、システムの設定で別途「ffmpegコマンドのパス」を設定してください。
-    </mt:unless>
-  </mtapp:setting>
-  <mtapp:setting id="jwplayer_url" label="JW PlayerのURL:">
-    <input type="text" name="jwplayer_url" value="<mt:var name="jwplayer_url" encode_html="1" />" class="full-width" /><br />
-    JW Player(player.swf/jwplayer.js)を配置したディレクトリのURL<br />
-    空白の場合は、ブログ -> ウェブサイト -> システム の優先度で利用します。
-  </mtapp:setting>
-  <mtapp:setting id="player_size" label="プレイヤーの長辺の長さ:">
-    <input type="text" name="player_size" value="<mt:var name="player_size" encode_html="1" />" style="width: 50px;" /> ピクセル
-  </mtapp:setting>
-</mtapp:setting>
-<mtapp:setting id="thumbnail_shape" label="サムネイルの形状:">
-  <mt:if name="thumbnail_shape" eq="2">
-    <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" checked="checked" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
-    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" /><label for="thumbnail_shape_1">縦横比率を維持して縮小</label>&nbsp;
-    <input type="radio" id="thumbnail_shape_0" name="thumbnail_shape" value="0" /><label for="thumbnail_shape_0">親の設定を継承</label>
-  </mt:if>
-  <mt:if name="thumbnail_shape" eq="1">
-    <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
-    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" checked="checked" /><label for="thumbnail_shape_1">縦横比率を維持して縮小</label>&nbsp;
-    <input type="radio" id="thumbnail_shape_0" name="thumbnail_shape" value="0" /><label for="thumbnail_shape_0">親の設定を継承</label>
-  </mt:if>
-  <mt:unless name="thumbnail_shape">
-    <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
-    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" /><label for="thumbnail_shape_1">縦横比率を維持して縮小</label>&nbsp;
-    <input type="radio" id="thumbnail_shape_0" name="thumbnail_shape" value="0" checked="checked" /><label for="thumbnail_shape_0">親の設定を継承</label>
-  </mt:unless>
-</mtapp:setting>
-<mtapp:setting id="thumbnail_size" label="サムネイルの長辺の長さ:">
-  <input type="text" name="thumbnail_size" value="<mt:var name="thumbnail_size" encode_html="1" />" style="width: 50px;" /> ピクセル<br />
-  空白または0の場合は、ブログ -> ウェブサイト -> システム の優先度で利用します。
-</mtapp:setting>
-<mtapp:setting id="default_subject" label="デフォルトの記事タイトル:">
-  <input type="text" name="default_subject" value="<mt:var name="default_subject" encode_html="1" />" class="full-width" /><br />
-  空白の場合は、ブログ -> ウェブサイト -> システム の優先度で利用します。
-</mtapp:setting>
-EOT
-}
-
-sub system_config_template {
-    my $tmpl = <<'EOT';
-<mtapp:setting id="geo" label="GPS位置情報:">
-  <mtapp:setting id="use_latlng" label="地図表示:">
-    <mt:if name="use_latlng" eq="2">
-      <input type="radio" id="use_latlng_2" name="use_latlng" value="2" checked="checked" /><label for="use_latlng_2">する</label>&nbsp;
-      <input type="radio" id="use_latlng_1" name="use_latlng" value="1" /><label for="use_latlng_1">しない</label><br />
-      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
-    </mt:if>
-    <mt:if name="use_latlng" eq="1">
-      <input type="radio" id="use_latlng_2" name="use_latlng" value="2" /><label for="use_latlng_2">する</label>&nbsp;
-      <input type="radio" id="use_latlng_1" name="use_latlng" value="1" checked="checked" /><label for="use_latlng_1">しない</label><br />
-      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
-    </mt:if>
-  <mt:unless name="use_latlng">
-      <input type="radio" id="use_latlng_2" name="use_latlng" value="2" /><label for="use_latlng_2">する</label>&nbsp;
-      <input type="radio" id="use_latlng_1" name="use_latlng" value="1" /><label for="use_latlng_1">しない</label><br />
-      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
-    </mt:unless>
-  </mtapp:setting>
-  <mtapp:setting id="gmap_key" label="Google Map API Key:">
-    <input type="text" name="gmap_key" value="<mt:var name="gmap_key" encode_html="1" />" class="full-width" /><br />
-    地図の表示に使用します。
-  </mtapp:setting>
-  <mtapp:setting id="gmap_size" label="地図のサイズ:">
-    <input type="text" name="gmap_width" value="<mt:var name="gmap_width" encode_html="1" />" style="width: 50px;" /> × <input type="text" name="gmap_height" value="<mt:var name="gmap_height" encode_html="1" />" style="width: 50px;" />
-  </mtapp:setting>
-</mtapp:setting>
-<mtapp:setting id="movie" label="ムービー:">
-  <mtapp:setting id="use_ffmpeg" label="掲載:">
-    <mt:if name="use_ffmpeg" eq="2">
-      <input type="radio" id="use_ffmpeg_2" name="use_ffmpeg" value="2" checked="checked" /><label for="use_ffmpeg_2">する</label>&nbsp;
-      <input type="radio" id="use_ffmpeg_1" name="use_ffmpeg" value="1" /><label for="use_ffmpeg_1">しない</label>
-      「する」に設定すると、メールに添付された動画ファイルをFLVに変換しブログに掲載します。（ffmpegが必要）
-    </mt:if>
-    <mt:if name="use_ffmpeg" eq="1">
-      <input type="radio" id="use_ffmpeg_2" name="use_ffmpeg" value="2" /><label for="use_ffmpeg_2">する</label>&nbsp;
-      <input type="radio" id="use_ffmpeg_1" name="use_ffmpeg" value="1" checked="checked" /><label for="use_ffmpeg_1">しない</label>
-      「する」に設定すると、メールに添付された動画ファイルをFLVに変換しブログに掲載します。（ffmpegが必要）
-    </mt:if>
-  </mtapp:setting>
-  <mtapp:setting id="ffmpeg_path" label="FFmpegコマンドのパス:">
-    <input type="text" name="ffmpeg_path" value="<mt:var name="ffmpeg_path" encode_html="1" />" class="full-width" /><br />
-    ムービーファイルの変換に使用します。<br />
-    共有サーバ等で変換による過負荷でプロセスがkillされてしまう場合はniceコマンドを併用してください。
-  </mtapp:setting>
-  <mtapp:setting id="temp_dir" label="変換テンポラリディレクトリ:">
-    <input type="text" name="temp_dir" value="<mt:var name="temp_dir" encode_html="1" />" class="full-width" /><br />
-    ムービーファイルの変換に使用します。<br />
-    ./run-periodic-tasks の実行権限で読み書き可能なパーミッションであること。
-  </mtapp:setting>
-  <mtapp:setting id="jwplayer_url" label="JW PlayerのURL:">
-    <input type="text" name="jwplayer_url" value="<mt:var name="jwplayer_url" encode_html="1" />" class="full-width" /><br />
-    JW Player(player.swf/jwplayer.js)を配置したディレクトリのURL
-  </mtapp:setting>
-  <mtapp:setting id="player_size" label="プレイヤーの長辺の長さ:">
-    <input type="text" name="player_size" value="<mt:var name="player_size" encode_html="1" />" style="width: 50px;" /> ピクセル
-  </mtapp:setting>
-</mtapp:setting>
-<mtapp:setting id="thumbnail_shape" label="サムネイルの形状:">
-  <mt:if name="thumbnail_shape" eq="2">
-    <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" checked="checked" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
-    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" /><label for="thumbnail_shape_1">縦横比率を維持して縮小</label>
-  <mt:else>
-    <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
-    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" checked="checked" /><label for="thumbnail_shape_1">縦横比率を維持して縮小</label>
-  </mt:if>
-</mtapp:setting>
-<mtapp:setting id="thumbnail_size" label="サムネイルの長辺の長さ:">
-  <input type="text" name="thumbnail_size" value="<mt:var name="thumbnail_size" encode_html="1" />" style="width: 50px;" /> ピクセル
-</mtapp:setting>
-<mtapp:setting id="default_subject" label="デフォルトの記事タイトル:">
-  <input type="text" name="default_subject" value="<mt:var name="default_subject" encode_html="1" />" class="full-width" />
-</mtapp:setting>
-<mtapp:setting id="use_debuglog" label="デバッグログ出力:">
-  <mt:if name="use_debuglog">
-    <input type="radio" id="use_debuglog_1" name="use_debuglog" value="1" checked="checked" /><label for="use_debuglog_1">する</label>&nbsp;
-    <input type="radio" id="use_debuglog_0" name="use_debuglog" value="0" /><label for="use_debuglog_0">しない</label>
-  <mt:else>
-    <input type="radio" id="use_debuglog_1" name="use_debuglog" value="1" /><label for="use_debuglog_1">する</label>&nbsp;
-    <input type="radio" id="use_debuglog_0" name="use_debuglog" value="0" checked="checked" /><label for="use_debuglog_0">しない</label>
-  </mt:if>
-</mtapp:setting>
-<mtapp:setting id="disable_delete_flag" label="受信後サーバから削除:">
-  <mt:if name="disable_delete_flag">
-    <input type="radio" id="disable_delete_flag_0" name="disable_delete_flag" value="0" /><label for="disable_delete_flag_0">する</label>&nbsp;
-    <input type="radio" id="disable_delete_flag_1" name="disable_delete_flag" value="1" checked="checked" /><label for="disable_delete_flag_1">しない</label>
-  <mt:else>
-    <input type="radio" id="disable_delete_flag_0" name="disable_delete_flag" value="0" checked="checked" /><label for="disable_delete_flag_0">する</label>&nbsp;
-    <input type="radio" id="disable_delete_flag_1" name="disable_delete_flag" value="1" /><label for="disable_delete_flag_1">しない</label>
-  </mt:if>
-  <br />「しない」場合、メールが削除されないので繰り返し投稿されます。（デバッグ用）
-</mtapp:setting>
-EOT
 }
 
 #----- Task

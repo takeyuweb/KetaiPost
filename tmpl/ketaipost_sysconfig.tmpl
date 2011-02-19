@@ -1,0 +1,98 @@
+<!--
+<mtapp:setting id="geo" label="GPS位置情報:">
+  <mtapp:setting id="use_latlng" label="地図表示:">
+    <mt:if name="use_latlng" eq="2">
+      <input type="radio" id="use_latlng_2" name="use_latlng" value="2" checked="checked" /><label for="use_latlng_2">する</label>&nbsp;
+      <input type="radio" id="use_latlng_1" name="use_latlng" value="1" /><label for="use_latlng_1">しない</label><br />
+      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
+    </mt:if>
+    <mt:if name="use_latlng" eq="1">
+      <input type="radio" id="use_latlng_2" name="use_latlng" value="2" /><label for="use_latlng_2">する</label>&nbsp;
+      <input type="radio" id="use_latlng_1" name="use_latlng" value="1" checked="checked" /><label for="use_latlng_1">しない</label><br />
+      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
+    </mt:if>
+  <mt:unless name="use_latlng">
+      <input type="radio" id="use_latlng_2" name="use_latlng" value="2" /><label for="use_latlng_2">する</label>&nbsp;
+      <input type="radio" id="use_latlng_1" name="use_latlng" value="1" /><label for="use_latlng_1">しない</label><br />
+      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
+    </mt:unless>
+  </mtapp:setting>
+  <mtapp:setting id="gmap_key" label="Google Map API Key:">
+    <input type="text" name="gmap_key" value="<mt:var name="gmap_key" encode_html="1" />" class="full-width" /><br />
+    地図の表示に使用します。
+  </mtapp:setting>
+  <mtapp:setting id="gmap_size" label="地図のサイズ:">
+    <input type="text" name="gmap_width" value="<mt:var name="gmap_width" encode_html="1" />" style="width: 50px;" /> × <input type="text" name="gmap_height" value="<mt:var name="gmap_height" encode_html="1" />" style="width: 50px;" />
+  </mtapp:setting>
+</mtapp:setting>
+-->
+<mtapp:setting id="movie" label="ムービー:">
+  <mtapp:setting id="use_ffmpeg" label="掲載:">
+    <mt:if name="use_ffmpeg" eq="2">
+      <input type="radio" id="use_ffmpeg_2" name="use_ffmpeg" value="2" checked="checked" /><label for="use_ffmpeg_2">する</label>&nbsp;
+      <input type="radio" id="use_ffmpeg_1" name="use_ffmpeg" value="1" /><label for="use_ffmpeg_1">しない</label>
+      「する」に設定すると、メールに添付された動画ファイルをFLVに変換しブログに掲載します。（ffmpegが必要）
+    </mt:if>
+    <mt:if name="use_ffmpeg" eq="1">
+      <input type="radio" id="use_ffmpeg_2" name="use_ffmpeg" value="2" /><label for="use_ffmpeg_2">する</label>&nbsp;
+      <input type="radio" id="use_ffmpeg_1" name="use_ffmpeg" value="1" checked="checked" /><label for="use_ffmpeg_1">しない</label>
+      「する」に設定すると、メールに添付された動画ファイルをFLVに変換しブログに掲載します。（ffmpegが必要）
+    </mt:if>
+  </mtapp:setting>
+  <mtapp:setting id="ffmpeg_path" label="FFmpegコマンドのパス:">
+    <input type="text" name="ffmpeg_path" value="<mt:var name="ffmpeg_path" encode_html="1" />" class="full-width" /><br />
+    ムービーファイルの変換に使用します。<br />
+    共有サーバ等で変換による過負荷でプロセスがkillされてしまう場合はniceコマンドを併用してください。
+  </mtapp:setting>
+  <mtapp:setting id="temp_dir" label="変換テンポラリディレクトリ:">
+    <input type="text" name="temp_dir" value="<mt:var name="temp_dir" encode_html="1" />" class="full-width" /><br />
+    ムービーファイルの変換に使用します。<br />
+    ./run-periodic-tasks の実行権限で読み書き可能なパーミッションであること。
+  </mtapp:setting>
+  <mtapp:setting id="jwplayer_url" label="JW PlayerのURL:">
+    <input type="text" name="jwplayer_url" value="<mt:var name="jwplayer_url" encode_html="1" />" class="full-width" /><br />
+    JW Player(player.swf/jwplayer.js)を配置したディレクトリのURL
+  </mtapp:setting>
+  <mtapp:setting id="player_size" label="プレイヤーの横幅:">
+    <input type="text" name="player_size" value="<mt:var name="player_size" encode_html="1" />" style="width: 50px;" /> ピクセル
+  </mtapp:setting>
+</mtapp:setting>
+<mtapp:setting id="thumbnail_shape" label="サムネイルの形状:">
+  <mt:if name="thumbnail_shape" eq="2">
+    <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" checked="checked" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
+    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" /><label for="thumbnail_shape_1">縦横比率を維持して縮小</label>
+  <mt:else>
+    <input type="radio" id="thumbnail_shape_2" name="thumbnail_shape" value="2" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;
+    <input type="radio" id="thumbnail_shape_1" name="thumbnail_shape" value="1" checked="checked" /><label for="thumbnail_shape_1">縦横比率を維持して縮小</label>
+  </mt:if>
+</mtapp:setting>
+<mtapp:setting id="thumbnail_size" label="サムネイルの横幅:">
+  <input type="text" name="thumbnail_size" value="<mt:var name="thumbnail_size" encode_html="1" />" style="width: 50px;" /> ピクセル
+</mtapp:setting>
+<mtapp:setting id="default_subject" label="デフォルトの記事タイトル:">
+  <input type="text" name="default_subject" value="<mt:var name="default_subject" encode_html="1" />" class="full-width" />
+</mtapp:setting>
+<mtapp:setting id="entry_text_template_id" label="記事テンプレート:">
+  [select_entry_text_template_id]<br />
+  掲載される記事の書式（レイアウト）をカスタマイズできます。<br />
+  <a href="?__mode=list_template#module">システムのテンプレートモジュール</a>としてテンプレートを作成し、ここで選択して下さい。
+</mtapp:setting>
+<mtapp:setting id="use_debuglog" label="デバッグログ出力:">
+  <mt:if name="use_debuglog">
+    <input type="radio" id="use_debuglog_1" name="use_debuglog" value="1" checked="checked" /><label for="use_debuglog_1">する</label>&nbsp;
+    <input type="radio" id="use_debuglog_0" name="use_debuglog" value="0" /><label for="use_debuglog_0">しない</label>
+  <mt:else>
+    <input type="radio" id="use_debuglog_1" name="use_debuglog" value="1" /><label for="use_debuglog_1">する</label>&nbsp;
+    <input type="radio" id="use_debuglog_0" name="use_debuglog" value="0" checked="checked" /><label for="use_debuglog_0">しない</label>
+  </mt:if>
+</mtapp:setting>
+<mtapp:setting id="disable_delete_flag" label="受信後サーバから削除:">
+  <mt:if name="disable_delete_flag">
+    <input type="radio" id="disable_delete_flag_0" name="disable_delete_flag" value="0" /><label for="disable_delete_flag_0">する</label>&nbsp;
+    <input type="radio" id="disable_delete_flag_1" name="disable_delete_flag" value="1" checked="checked" /><label for="disable_delete_flag_1">しない</label>
+  <mt:else>
+    <input type="radio" id="disable_delete_flag_0" name="disable_delete_flag" value="0" checked="checked" /><label for="disable_delete_flag_0">する</label>&nbsp;
+    <input type="radio" id="disable_delete_flag_1" name="disable_delete_flag" value="1" /><label for="disable_delete_flag_1">しない</label>
+  </mt:if>
+  <br />「しない」場合、メールが削除されないので繰り返し投稿されます。（デバッグ用）
+</mtapp:setting>

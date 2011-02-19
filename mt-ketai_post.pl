@@ -117,7 +117,7 @@ my $plugin = MT::Plugin::KetaiPost->new({
         # -1 : デフォルトのテンプレート（tmpl/entry.tmpl）
         # 0  : 設定を継承
         # 1～ : テンプレートID
-        ['entry_text_template_id', { Scope => 'blog', Default => -2 }],
+        ['entry_text_template_id', { Scope => 'blog', Default => 0 }],
         ['entry_text_template_id', { Scope => 'system', Default => -1 }],
     ]),
     blog_config_template => 'ketaipost_config.tmpl',

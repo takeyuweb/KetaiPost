@@ -11,7 +11,7 @@ use base qw( MT::Plugin );
 
 use vars qw($PLUGIN_NAME $VERSION);
 $PLUGIN_NAME = 'KetaiPost';
-$VERSION = '0.4.0';
+$VERSION = '0.4.1';
 
 use KetaiPost::MailBox;
 use KetaiPost::Author;
@@ -93,7 +93,7 @@ my $plugin = MT::Plugin::KetaiPost->new({
         ['thumbnail_size', { Scope => 'system', Default => 240 }],
         # タイトル無し
         ['default_subject', { Scope => 'blog', Default => '' }],
-        ['default_subject', { Scope => 'system', Default => '無題' }],
+        ['default_subject', { Scope => 'system', Default => 'no title' }],
         # デバッグ用ログを出力
         ['use_debuglog', { Scope => 'system', Default => 0 }],
         # 削除フラグを立てない（テスト用）

@@ -530,7 +530,7 @@ sub build_attributes {
         $carrier = 'docomo';
     } elsif ($umail =~ /ezweb\.ne\.jp\z/) {
         $carrier = 'kddi';
-    } elsif ($umail =~ /(softbank\.ne\.jp|vodafone\.ne\.jp|disney\.ne\.jp)\z/) {
+    } elsif ($umail =~ /(softbank\.ne\.jp|vodafone\.ne\.jp|disney\.ne\.jp|i\.softbank\.jp)\z/) {
         $carrier = 'softbank';
     }
     
@@ -649,7 +649,9 @@ sub _extract_mail_entity {
                 my $text_charset = $default_charset;
                 my $contenttype = $part->head->get('Content-Type');
                 $text_charset = $1 if $contenttype && $contenttype =~ /charset="?([\w_-]+)"?/i;
-                $text .= $self->_encode_text( $carrier, $part->bodyhandle->as_string, $text_charset );
+                my $buf = $self->_encode_text( $carrier, $part->bodyhandle->as_string, $text_charset );
+                next if $buf =~ /\A\s*\z/m;
+                $text .= $buf;
             } else {
                 #添付
                 #ファイル名を含むパスを取り出し

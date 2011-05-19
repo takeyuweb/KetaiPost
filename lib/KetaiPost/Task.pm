@@ -450,6 +450,7 @@ sub process {
                 my $old_entry = $entry->clone;
                 my ($new_text, $tmpl_error) = $self->build_entry_text($entry);
                 if ( defined($new_text) ) {
+                    utf8::decode($new_text) unless utf8::is_utf8($new_text);
                     $entry->text($new_text);
                     $entry->save;
                     $app->run_callbacks('cms_post_save.entry', $app, $entry, $old_entry);
@@ -747,12 +748,17 @@ sub create_entry {
     
     $self->{plugin}->log_debug("エントリを投稿します");
     
+    my ( $subject2, $text2 ) = ($subject, $text);
+    # MT::Objectに入れるものはフラグを立てる
+    utf8::decode($subject2) unless utf8::is_utf8($subject2);
+    utf8::decode($text2) unless utf8::is_utf8($text2);
+
     $entry->blog_id($blog->id);
     $entry->category_id($category->id) if $category;
     $entry->author_id($author->id);
     $entry->status($blog->status_default); # ブログの設定、新しく作った記事が「公開」になるか「下書き」になるか
-    $entry->title($subject);
-    $entry->text($text);
+    $entry->title($subject2);
+    $entry->text($text2);
     $entry->allow_comments($blog->allow_comments_default); # コメントを受け付けるか
     $entry->allow_pings($blog->allow_pings_default); # トラックバックpingを受け付けるか
     if($entry->save) {
@@ -766,9 +772,7 @@ sub create_entry {
             $place->save;
         }
 
-        my $title = $entry->title;
-        utf8::decode($title);
-        $self->{plugin}->log_info("'".$author->name."'がブログ記事'".$title."'(ID:".$entry->id.")を追加しました。", {
+        $self->{plugin}->log_info("'".$author->name."'がブログ記事'".$entry->title."'(ID:".$entry->id.")を追加しました。", {
             author_id => $author->id,
             blog_id => $blog->id,
         });

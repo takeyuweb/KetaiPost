@@ -15,6 +15,8 @@ use File::Temp;
 use Mail::POP3Client;
 use MIME::Parser; # MIME-tools
 
+use Image::Size qw( imgsize );
+
 use MT::Image;
 use MT::Asset::Image;
 use MT::ObjectAsset;
@@ -257,8 +259,7 @@ sub process {
                         $self->{plugin}->log_debug($ref_image->{filename}." を ".$file_path." に書き込みました。");
                         
                         # アイテムの登録
-                        my $img = MT::Image->new( Filename => $file_path );
-                        my($blob, $width, $height) = $img->scale( Scale => 100 );
+                        my ( $width, $height ) = imgsize( $file_path );
                         my $asset = MT::Asset::Image->new;
                         # 情報セット
                         $asset->label($entry->title);
@@ -423,8 +424,7 @@ sub process {
                         $self->{plugin}->log_debug("サムネイルを作成しました。 path:$thumbnail_path url:$thumbnail_url");
                         
                         # サムネイルの登録
-                        my $img = MT::Image->new( Filename => $thumbnail_path );
-                        my($thumb_blob, $thumb_width, $thumb_height) = $img->scale( Scale => 100 );
+                        my ( $thumb_width, $thumb_height ) = imgsize( $thumbnail_path );
                         my $thumbnail_asset = MT::Asset::Image->new;
                         $thumbnail_asset->label('Thumbnail of '.$asset->label);
                         $thumbnail_asset->file_path($thumbnail_path);

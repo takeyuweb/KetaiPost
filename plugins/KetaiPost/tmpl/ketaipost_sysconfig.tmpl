@@ -77,6 +77,18 @@
   掲載される記事の書式（レイアウト）をカスタマイズできます。<br />
   <a href="?__mode=list_template#module">システムのテンプレートモジュール</a>としてテンプレートを作成し、ここで選択して下さい。
 </mtapp:setting>
+<mtapp:setting id="enable_escape" label="HTMLのエスケープ:">
+    <mt:if name="enable_escape" eq="2">
+      <input type="radio" id="enable_escape_2" name="enable_escape" value="2" checked="checked" /><label for="enable_escape_2">する</label>&nbsp;
+      <input type="radio" id="enable_escape_1" name="enable_escape" value="1" /><label for="enable_escape_1">しない</label><br />
+      「する」に設定すると、メール文中のHTMLをエスケープ（サニタイズ）します。信頼できるユーザ以外の投稿を許可する場合は「する」にしてください。
+    </mt:if>
+    <mt:if name="enable_escape" eq="1">
+      <input type="radio" id="enable_escape_2" name="enable_escape" value="2" /><label for="enable_escape_2">する</label>&nbsp;
+      <input type="radio" id="enable_escape_1" name="enable_escape" value="1" checked="checked" /><label for="enable_escape_1">しない</label><br />
+      「する」に設定すると、メール文中のHTMLをエスケープ（サニタイズ）します。信頼できるユーザ以外の投稿を許可する場合は「する」にしてください。
+    </mt:if>
+  </mtapp:setting>
 <mtapp:setting id="use_debuglog" label="デバッグログ出力:">
   <mt:if name="use_debuglog">
     <input type="radio" id="use_debuglog_1" name="use_debuglog" value="1" checked="checked" /><label for="use_debuglog_1">する</label>&nbsp;

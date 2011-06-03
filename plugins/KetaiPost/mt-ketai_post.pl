@@ -11,7 +11,7 @@ use base qw( MT::Plugin );
 
 use vars qw($PLUGIN_NAME $VERSION);
 $PLUGIN_NAME = 'KetaiPost';
-$VERSION = '0.4.3';
+$VERSION = '0.4.4';
 
 use KetaiPost::MailBox;
 use KetaiPost::Author;
@@ -119,6 +119,12 @@ my $plugin = MT::Plugin::KetaiPost->new({
         # 1～ : テンプレートID
         ['entry_text_template_id', { Scope => 'blog', Default => 0 }],
         ['entry_text_template_id', { Scope => 'system', Default => -1 }],
+        # HTMLエスケープ
+        # 0 継承
+        # 1 しない
+        # 2 する
+        ['enable_escape', { Scope => 'blog', Default => 0 }],
+        ['enable_escape', { Scope => 'system', Default => 2 }],
     ]),
     blog_config_template => 'ketaipost_config.tmpl',
     system_config_template => 'ketaipost_sysconfig.tmpl',
@@ -248,6 +254,21 @@ sub use_ffmpeg {
     $self->{use_ffmpeg} = 0;
     }
     $self->{use_ffmpeg};
+}
+
+# HTMLエスケープを行うか
+sub use_escape {
+    my $self = shift;
+    my ($blog_id) = @_;
+    return $self->{enable_escape} if defined($self->{enable_escape});
+
+
+    if ($self->get_setting($blog_id, 'enable_escape') == 2) {
+        $self->{enable_escape} = 1;
+    } else {
+        $self->{enable_escape} = 0;
+    }
+    $self->{enable_escape};
 }
 
 # 機能に関するチェック ここまで

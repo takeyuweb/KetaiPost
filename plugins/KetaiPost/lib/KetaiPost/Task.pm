@@ -138,9 +138,22 @@ sub process {
                 # 記事登録
                 my ($subject, $text) = ($ref_data->{subject}, $ref_data->{text});
                 $subject = $self->{plugin}->get_setting($blog->id, 'default_subject') || '無題' unless ($subject);
-                $text = MT::Util::encode_html($text);
-                $text =~ s/\r\n/\n/g;
-                $text =~ s/\n/<br \/>/g;
+                if ( $self->{plugin}->use_escape($blog->id) ) {
+                    $subject = MT::Util::encode_html($subject);
+                    $text = MT::Util::encode_html($text);
+                    $text =~ s/\r\n/\n/g;
+                    $text =~ s/\n/<br \/>/g;
+                } else {
+                    # HTMLエスケープしない場合改行の扱いがネック br と 改行コード
+                    # brタグが含まれるなら改行コードの変換を行わない
+                    # そうでないなら改行コードをbrタグに変換 で暫定対処
+                    if ( $text =~ m|<br\s*/?>| ) {
+                        # 含まれるなら改行変換をしない
+                    } else {
+                        $text =~ s/\r\n/\n/g;
+                        $text =~ s/\n/<br \/>/g;
+                    }
+                }
                 my $entry = $self->create_entry($blog, $author, $subject, $text, $category);
                 next unless $entry;
                 
@@ -581,11 +594,7 @@ sub build_attributes {
     $self->{plugin}->log_debug("subject: $subject");
     utf8::encode($subject) if utf8::is_utf8($subject); # フラグを落とす
     $subject = MT::I18N::encode_text($subject, 'utf-8', undef);
-    
-    if ($subject) {
-        $subject =~ s/[\x00-\x1f]//g;
-        $subject = MT::Util::encode_html($subject);
-    }
+    $subject =~ s/[\x00-\x1f]//g if $subject;
     
     # 本文・添付ファイルの取り出し
     my $default_charset = 'iso-2022-jp';

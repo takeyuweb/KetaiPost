@@ -93,3 +93,23 @@
   <a href="?__mode=list_template#module">テンプレートモジュール</a>としてテンプレートを作成し、ここで選択して下さい。<br />
   「親の設定を継承」の場合は、ブログ -> ウェブサイト -> システム の優先度で利用します。
 </mtapp:setting>
+<mtapp:setting id="enable_escape" label="HTMLのエスケープ:">
+  <mt:if name="enable_escape" eq="2">
+    <input type="radio" id="enable_escape_2" name="enable_escape" value="2" checked="checked" /><label for="enable_escape_2">する</label>&nbsp;
+    <input type="radio" id="enable_escape_1" name="enable_escape" value="1" /><label for="enable_escape_1">しない</label>&nbsp;
+    <input type="radio" id="enable_escape_0" name="enable_escape" value="0" /><label for="enable_escape_0">親の設定を継承</label><br />
+    「する」に設定すると、メール文中のHTMLをエスケープ（サニタイズ）します。信頼できるユーザ以外の投稿を許可する場合は「する」にしてください。
+  </mt:if>
+  <mt:if name="enable_escape" eq="1">
+    <input type="radio" id="enable_escape_2" name="enable_escape" value="2" /><label for="enable_escape_2">する</label>&nbsp;
+    <input type="radio" id="enable_escape_1" name="enable_escape" value="1" checked="checked" /><label for="enable_escape_1">しない</label>&nbsp;
+    <input type="radio" id="enable_escape_0" name="enable_escape" value="0" /><label for="enable_escape_0">親の設定を継承</label><br />
+    「する」に設定すると、メール文中のHTMLをエスケープ（サニタイズ）します。信頼できるユーザ以外の投稿を許可する場合は「する」にしてください。
+  </mt:if>
+  <mt:unless name="enable_escape">
+    <input type="radio" id="enable_escape_2" name="enable_escape" value="2" /><label for="enable_escape_2">する</label>&nbsp;
+    <input type="radio" id="enable_escape_1" name="enable_escape" value="1" /><label for="enable_escape_1">しない</label>&nbsp;
+    <input type="radio" id="enable_escape_0" name="enable_escape" value="0" checked="checked" /><label for="enable_escape_0">親の設定を継承</label><br />
+    「する」に設定すると、メール文中のHTMLをエスケープ（サニタイズ）します。信頼できるユーザ以外の投稿を許可する場合は「する」にしてください。
+  </mt:unless>
+</mtapp:setting>

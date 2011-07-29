@@ -6,7 +6,7 @@ use MT::Entry;
 use MT::Asset::Image;
 use File::Basename;
 
-use KetaiPost::Util qw( log_debug get_blog_setting get_system_setting get_website_setting );
+use KetaiPost::Util qw( log_debug get_setting );
 
 sub _hdlr_entry_ketai_post_video {
     my ( $ctx, $args ) = @_;

@@ -3,6 +3,8 @@ package KetaiPost::Callbacks;
 use strict;
 use warnings;
 
+use utf8;
+
 use KetaiPost::Util qw( log_debug get_blog_setting get_system_setting get_website_setting
                         update_or_create_ketaipost_author);
 

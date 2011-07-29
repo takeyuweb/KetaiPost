@@ -6,24 +6,24 @@ use MT::Entry;
 use MT::Asset::Image;
 use File::Basename;
 
+use KetaiPost::Util qw( log_debug get_blog_setting get_system_setting get_website_setting );
+
 sub _hdlr_entry_ketai_post_video {
     my ( $ctx, $args ) = @_;
 
-    my $plugin = MT->component( 'KetaiPost' );
-
-    $plugin->log_debug( "_hdlr_entry_ketai_post_video called" );
+    log_debug( "_hdlr_entry_ketai_post_video called" );
     
     my $tag = 'MT' . $ctx->stash( 'tag' );
     my $entry = $ctx->stash( 'entry' );
     return $ctx->_no_entry_error( $tag ) unless defined $entry;
-    $plugin->log_debug("[$tag] entry found.");
+    log_debug("[$tag] entry found.");
     my $asset = $ctx->stash( 'asset' );
     return $ctx->_no_asset_error( $tag ) unless defined $asset;
-    $plugin->log_debug("[$tag] video found.");
+    log_debug("[$tag] video found.");
     my $thumbnail = MT::Asset::Image->load( { parent => $asset->id } );
-    $plugin->log_debug("[$tag] thumbnail found.");
+    log_debug("[$tag] thumbnail found.");
     
-    my $jwplayer_url = $plugin->get_setting($entry->blog_id, 'jwplayer_url');
+    my $jwplayer_url = get_setting($entry->blog_id, 'jwplayer_url');
     my ($video_basename) = fileparse($asset->file_name, qr/.flv/);
     my $url = $asset->url;
     my $thumbnail_url = $thumbnail->url;

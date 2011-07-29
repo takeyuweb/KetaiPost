@@ -6,7 +6,7 @@ use base 'Exporter';
 our @EXPORT_OK = qw( log_debug log_info log_error get_blog_setting get_website_setting get_system_setting get_setting
                      use_exiftool use_magick use_gmap use_emoji use_ffmpeg use_escape if_can_administer_blog
                      update_or_create_ketaipost_author if_can_edit_ketaipost_author if_can_edit_mailboxes
-                     if_can_on_blog );
+                     if_can_on_blog if_module_exists get_module_version );
 
 use MT;
 use MT::Log;
@@ -15,6 +15,17 @@ our $plugin = MT->component( 'KetaiPost' );
 
 
 # 機能に関するチェック ここから
+
+sub if_module_exists {
+    my ($name) = @_;
+    eval "require $name";
+    return ($@ ? 0 : 1);
+}
+
+sub get_module_version {
+    my ($name) = @_;
+    if_module_exists( $name ) ? eval "require $name; return \$@{[$name]}::VERSION;" : undef;
+}
 
 # ライブラリ使用チェック
 sub use_exiftool {

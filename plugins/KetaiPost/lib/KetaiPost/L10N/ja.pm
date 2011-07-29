@@ -8,8 +8,10 @@ use utf8;
 use base 'KetaiPost::L10N::en_us';
 use vars qw( %Lexicon );
 
+use KetaiPost::Plugin;
+
 %Lexicon = (
-    '_PLUGIN_DESCRIPTION' => '携帯メール投稿プラグイン',
+    '_PLUGIN_DESCRIPTION' => KetaiPost::Plugin::description,
     'KetaiPost Default' => 'KetaiPost標準',
     'System Template Modules' => 'システムのテンプレートモジュール',
     'Mail Post' => 'メール投稿',

@@ -1,6 +1,25 @@
-<mt:include name="dialog/header.tmpl" page_title="送信元メールアドレスとユーザーの関連付け" />
+<mt:SetVarBlock name="jq_js_include" append="1">
+  (function($){
+    function toggleAddressField(){
+      if ($('input[name="enable_sync"]:checked').val() == 1) {
+        $('#address-field').hide();
+      } else {
+        $('#address-field').show();
+      }
+    }
+    $('input[name="enable_sync"]').click(function(){
+      toggleAddressField();
+    });
+    toggleAddressField();
+  })(jQuery);
+</mt:SetVarBlock>
+
+<mt:setvarblock name="page_title"><mt:if name="id"><__trans phrase="Edit Author"><mt:else><__trans phrase="Create Author"></mt:else></mt:if></mt:setvarblock>
+
+<mt:include name="include/header.tmpl">
 
 <form method="post" action="<mt:var name="script_url" />" class="first-child last-child">
+  <input type="hidden" name="blog_id" value="<mt:var name="blog_id" />" />
   <input type="hidden" name="__mode" value="save_ketaipost_author" />
   <input type="hidden" name="magic_token" value="<mt:var name="magic_token" />" />
   <input type="hidden" name="return_args" value="<mt:var name="return_args" />" />
@@ -10,25 +29,39 @@
   
   <mtapp:setting
      id="author_id"
-     label="ユーザー:">
+     label="ユーザー:"
+     show_hint="1"
+     hint="あなたが管理権限を持つブログ・ウェブサイトのユーザーを登録できます。（記事作成権限のあるユーザーのみ）">
     <select name="author_id" id="author_id">
       <mt:loop name="authors">
-	<option value="<mt:var name="id" />" <mt:if name="selected">selected="selected"</mt:if>><mt:var name="name" encode_html="1" /></option>
+	    <option value="<mt:var name="id" />" <mt:if name="selected">selected="selected"</mt:if>><mt:var name="name" encode_html="1" /></option>
       </mt:loop>
     </select>
   </mtapp:setting>
   
   <mtapp:setting
+     id="enable_sync"
+     label="メールアドレスの同期"
+     show_hint="1"
+     hint="指定のユーザー情報に登録されている電子メールアドレスを使用します。">
+    <input type="radio" id="enable_sync_1" name="enable_sync" value="1"<mt:if name="enable_sync"> checked="checked"</mt:if> />
+    <label for="enable_sync_1">有効</label>
+    <input type="radio" id="enable_sync_0" name="enable_sync" value="0"<mt:unless name="enable_sync"> checked="checked"</mt:unless> />
+    <label for="enable_sync_0">無効</label>
+  </mtapp:setting>
+
+  <mtapp:setting
      id="address"
-     label="送信元メールアドレス:">
+     label="送信元メールアドレス:"
+     show_hint="1"
+     hint="記入しない場合はすべてのメールアドレスに適用されます。">
     <input type="text" name="address" value="<mt:var name="address" encode_html="1" />" /><br />
-    記入しない場合はすべてのメールアドレスに適用されます。
   </mtapp:setting>
   
   <div class="actions-bar last-child">
-    <button class="close action primary-button first-child" title="OK" type="submit">OK</button>
-    <button title="キャンセル" class="cancel action mt-close-dialog last-child" onclick="parent.jQuery.fn.mtDialog.close(); return false;">キャンセル</button>
+    <button class="close action primary button first-child" title="OK" type="submit">OK</button>
+    <button class="action previous button" title="戻る" onclick="history.back(); return false;">戻る</button>
   </div>
 </form>
 
-<mt:include name="dialog/footer.tmpl" />
+<mt:include name="include/footer.tmpl" />

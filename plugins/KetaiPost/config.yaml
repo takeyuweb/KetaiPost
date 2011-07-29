@@ -1,0 +1,253 @@
+l10n_class: KetaiPost::L10N
+id: KetaiPost
+key: ketaipost
+name: KetaiPost
+version: 1.0.0
+author_name: Yuichi Takeuchi
+author_link: http://takeyu-web.com/
+doc_link: http://takeyu-web.com/download/mt5-ketaipost/cat65/
+description: <__trans phrase="_PLUGIN_DESCRIPTION">
+
+schema_version: 20110727.007
+
+applications:
+  cms:
+    menus:
+      ketaipost:
+        label: Mail Post
+        order: 605
+      ketaipost:mailbox:
+        label: Mailbox List
+        mode: list
+        args:
+          _type: ketaipost_mailbox
+        order: 10
+        condition: $ketaipost::KetaiPost::Plugin::check_permission
+        view:
+          - system
+          - website
+          - blog
+      ketaipost:mailbox:new:
+        label: Add Mailbox
+        mode: select_ketaipost_blog
+        args:
+          _type: ketaipost_mailbox
+        order: 20
+        condition: $ketaipost::KetaiPost::Plugin::check_permission 
+        view:
+          - system
+          - website
+          - blog
+      ketaipost:author:
+        label: Author List
+        mode: list
+        args:
+          _type: ketaipost_author
+        order: 30
+        condition: $ketaipost::KetaiPost::Plugin::check_list_ketaipost_author_permission
+        view:
+          - system
+      ketaipost:author:new:
+        label: Add Author
+        mode: edit_ketaipost_author
+        args:
+          _type: ketaipost_author
+        order: 40
+        condition: $ketaipost::KetaiPost::Plugin::check_permission
+        view:
+          - system
+    methods:
+      select_ketaipost_blog: $ketaipost::KetaiPost::CMS::select_ketaipost_blog
+      edit_ketaipost_mailbox: $ketaipost::KetaiPost::CMS::edit_ketaipost_mailbox
+      save_ketaipost_mailbox: $ketaipost::KetaiPost::CMS::save_ketaipost_mailbox
+      delete_ketaipost_mailbox: $ketaipost::KetaiPost::CMS::delete_ketaipost_mailbox
+      edit_ketaipost_author: $ketaipost::KetaiPost::CMS::edit_ketaipost_author
+      save_ketaipost_author: $ketaipost::KetaiPost::CMS::save_ketaipost_author
+      delete_ketaipost_author: $ketaipost::KetaiPost::CMS::delete_ketaipost_author
+      check_ketaipost_mailbox: $ketaipost::KetaiPost::CMS::check_ketaipost_mailbox
+      sync_ketaipost_authors: $ketaipost::KetaiPost::CMS::sync_ketaipost_authors
+
+listing_screens:
+  ketaipost_mailbox:
+    object_label: Mailbox
+    screen_label: Mailbox List (To Addresses)
+    object_label_plural: Mailbox
+    primary: address
+    default_sort_key: address
+    condition: $ketaipost::KetaiPost::Plugin::check_permission
+    view:
+      - system
+      - website
+      - blog
+  ketaipost_author:
+    object_label: Author
+    screen_label: Author List (From Addresses)
+    object_label_plural: Author
+    primary: address
+    default_sort_key: address
+    condition: $ketaipost::KetaiPost::Plugin::check_list_ketaipost_author_permission
+    view:
+      - system
+
+list_properties:
+  ketaipost_mailbox: $ketaipost::KetaiPost::MailBox::list_properties
+  ketaipost_author: $ketaipost::KetaiPost::Author::list_properties
+
+list_actions:
+  ketaipost_mailbox: $ketaipost::KetaiPost::MailBox::list_actions
+  ketaipost_author: $ketaipost::KetaiPost::Author::list_actions
+
+content_actions:
+  ketaipost_mailbox: $ketaipost::KetaiPost::MailBox::content_actions
+  ketaipost_author: $ketaipost::KetaiPost::Author::content_actions
+
+settings:
+  # ここから、位置情報に関する設定
+  # 位置情報を使う
+  # 0 継承
+  # 1 使わない
+  # 2 使う（地図を表示）
+  use_latlng:
+    scope: blog
+    default: 0
+  sys_use_latlng:
+    scope: system
+    default: 1
+  # Google Map API Key
+  gmap_key:
+    scope: blog
+    default:
+  sys_gmap_key:
+    scope: system
+    default:
+  # 地図の大きさ (XXX,YYY)
+  gmap_width:
+    scope: blog
+    default: 0
+  sys_gmap_width:
+    scope: system
+    default: 360
+  gmap_height:
+    scope: blog
+    default: 0
+  sys_gmap_height:
+    scope: system
+    default: 240
+  # 位置情報に関する設定ここまで
+  # サムネイルの形状
+  # 0 継承
+  # 1 そのまま縮小
+  # 2 正方形（切り取り）
+  thumbnail_shape:
+    scope: blog
+    default: 0
+  sys_thumbnail_shape:
+    scope: system
+    default: 1
+  # サムネイルの横幅
+  thumbnail_size:
+    scope: blog
+    default: 240
+  sys_thumbnail_size:
+    scope: system
+    default: 240
+  # タイトル無し
+  default_subject:
+    scope: blog
+    default:
+  sys_default_subject:
+    scope: system
+    default: no subject
+  # デバッグ用ログを出力
+  sys_use_debuglog:
+    scope: system
+    default: 0
+  # 削除フラグを立てない（テスト用）
+  sys_disable_delete_flag:
+    scope: system
+    default: 0
+  # 送信元の自動登録
+  sys_sync_authors:
+    scope: system
+    default: 0
+  # 動画掲載
+  # 0 : 設定を継承
+  # 1 : 利用しない
+  # 2 : 利用する
+  use_ffmpeg:
+    scope: blog
+    default: 0
+  sys_use_ffmpeg:
+    scope: system
+    default: 1
+  # FFmpegのパス
+  sys_ffmpeg_path:
+    scope: system
+    default:
+  # 一時ファイル置き場
+  sys_temp_dir:
+    scope: system
+    default: /tmp
+  # プレイヤーの横幅
+  jwplayer_url:
+    scope: blog
+    default:
+  sys_jwplayer_url:
+    scope: system
+    default: /jwplayer/
+  player_size:
+    scope: blog
+    default: 360
+  sys_player_size:
+    scope: system
+    default: 360
+  # 記事テンプレート
+  # -1 : デフォルトのテンプレート（tmpl/entry.tmpl）
+  # 0  : 設定を継承
+  # 1～ : テンプレートID
+  entry_text_template_id:
+    scope: blog
+    default: 0
+  sys_entry_text_template_id:
+    scope: system
+    default: -1
+  # HTMLエスケープ
+  # 0 継承
+  # 1 しない
+  # 2 する
+  enable_escape:
+    scope: blog
+    default: 0
+  sys_enable_escape:
+    scope: system
+    default: 2
+
+blog_config_template: ketaipost_config.tmpl
+system_config_template: ketaipost_sysconfig.tmpl
+
+object_types:
+  ketaipost_mailbox: KetaiPost::MailBox
+  ketaipost_author: KetaiPost::Author
+
+upgrade_functions:
+  update_null_columns:
+    version_limit: 20110727.006
+    plugin: KetaiPost
+    code: $ketaipost::KetaiPost::Plugin::update_null_columns
+
+tasks:
+  KetaiPost:
+    label: KetaiPost
+    frequency: 300
+    code: $ketaipost::KetaiPost::Plugin::hdlr_task
+
+tags:
+  function:
+    EntryKetaiPostVideo: $ketaipost::KetaiPost::Tags::_hdlr_entry_ketai_post_video
+
+callbacks:
+  template_source.ketaipost_config: $ketaipost::KetaiPost::Callbacks::_cb_tmpl_source_ketaipost_config
+  template_source.ketaipost_sysconfig: $ketaipost::KetaiPost::Callbacks::_cb_tmpl_source_ketaipost_sysconfig
+  cms_post_save.author: $ketaipost::KetaiPost::Callbacks::hdlr_cms_post_save_author
+  MT::Permission::post_save: $ketaipost::KetaiPost::Callbacks::hdlr_post_save_permission
+

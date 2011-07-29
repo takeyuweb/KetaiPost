@@ -1,6 +1,11 @@
-<mt:include name="dialog/header.tmpl" page_title="送信先メールアドレス（メールボックス）登録" />
+
+<mt:setvarblock name="page_title"><mt:if name="id"><__trans phrase="Edit Mailbox"><mt:else><__trans phrase="Create Mailbox"></mt:else></mt:if></mt:setvarblock>
+
+<mt:include name="include/header.tmpl">
+
 
 <form method="post" action="<mt:var name="script_url" />" class="first-child last-child">
+  <input type="hidden" name="blog_id" value="<mt:var name="blog_id">" />
   <input type="hidden" name="__mode" value="save_ketaipost_mailbox" />
   <input type="hidden" name="magic_token" value="<mt:var name="magic_token" />" />
   <input type="hidden" name="return_args" value="<mt:var name="return_args" />" />
@@ -11,9 +16,9 @@
   <h2>記事登録先の設定</h2>
   
   <mtapp:setting
-     id="blog_id"
+     id="post_blog_id"
      label="ブログ:">
-    <input type="hidden" name="blog_id" id="blog_id" value="<mt:var name="blog_id" />" />
+    <input type="hidden" name="post_blog_id" id="post_blog_id" value="<mt:var name="post_blog_id" />" />
     <mt:var name="blog_name" encode_html="1" />
   </mtapp:setting>
   
@@ -90,9 +95,8 @@
   </mtapp:setting>
   
   <div class="actions-bar last-child">
-    <button class="close action primary-button first-child" title="OK" type="submit">OK</button>
-    <button class="action previous" title="戻る" onclick="history.back(); return false;">戻る</button>
-    <button title="キャンセル" class="cancel action mt-close-dialog last-child" onclick="parent.jQuery.fn.mtDialog.close(); return false;">キャンセル</button>
+    <button class="close action primary button first-child" title="OK" type="submit">OK</button>
+    <button class="action previous button" title="戻る" onclick="history.back(); return false;">戻る</button>
   </div>
 </form>
-<mt:include name="dialog/footer.tmpl" />
+<mt:include name="include/footer.tmpl" />

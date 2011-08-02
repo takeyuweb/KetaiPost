@@ -8,10 +8,17 @@ use utf8;
 use MT;
 use MT::Util qw( encode_html );
 use KetaiPost::Util qw( if_can_administer_blog get_system_setting log_debug
-                        if_can_edit_ketaipost_author if_can_edit_mailboxes
+                        if_can_edit_ketaipost_author if_can_edit_mailboxes if_can_view_mailbox_addresses
                         if_module_exists get_module_version);
 
 our $plugin = MT->component( 'KetaiPost' );
+
+sub check_view_mailbox_addresses_permission {
+    my ( $blog ) = @_;
+    my $app = MT->instance;
+    if_can_edit_mailboxes( $app->user, $blog );
+    if_can_view_mailbox_addresses( $app->user, $blog );
+}
 
 sub check_permission {
     my ( $blog ) = @_;

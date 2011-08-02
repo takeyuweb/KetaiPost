@@ -22,7 +22,7 @@ applications:
         args:
           _type: ketaipost_mailbox
         order: 10
-        condition: $ketaipost::KetaiPost::Plugin::check_permission
+        condition: $ketaipost::KetaiPost::Plugin::check_view_mailbox_addresses_permission
         view:
           - system
           - website
@@ -74,7 +74,7 @@ listing_screens:
     object_label_plural: Mailbox
     primary: address
     default_sort_key: address
-    condition: $ketaipost::KetaiPost::Plugin::check_permission
+    condition: $ketaipost::KetaiPost::Plugin::check_view_mailbox_addresses_permission
     view:
       - system
       - website

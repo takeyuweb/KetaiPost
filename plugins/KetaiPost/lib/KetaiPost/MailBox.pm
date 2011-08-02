@@ -12,7 +12,7 @@ use Carp;
 
 use MT::Util qw( encode_html );
 use KetaiPost::Util qw( if_can_administer_blog get_system_setting log_debug
-                        if_can_edit_ketaipost_author );
+                        if_can_edit_mailboxes if_can_edit_ketaipost_author );
 
 
 use MT::Object;
@@ -45,6 +45,7 @@ sub blog {
 }
 
 sub list_properties {
+    my $app = MT->instance;
     my $props = {
         address => {
             auto => 1,
@@ -57,32 +58,32 @@ sub list_properties {
             auto    => 1,
             order => 200,
             label => 'Mail Account',
-            display =>'optional',
+            condition => sub { if_can_edit_mailboxes( $app->user, $app->blog ); },
         },
         host => {
             auto    => 1,
             order => 300,
             label => 'Host',
-            display => 'optional',
+            condition => sub { if_can_edit_mailboxes( $app->user, $app->blog ); },
         },
         port => {
             auto    => 1,
             order => 400,
             label => 'Port',
-            display => 'optional',
+            condition => sub { if_can_edit_mailboxes( $app->user, $app->blog ); },
         },
         use_ssl => {
             auto => 1,
             order => 500,
             label => 'SSL',
-            display => 'optional',
+            condition => sub { if_can_edit_mailboxes( $app->user, $app->blog ); },
             html => sub { _use_ssl( @_ ); }
         },
         use_apop => {
             auto => 1,
             order => 600,
             label => 'APOP',
-            display => 'optional',
+            condition => sub { if_can_edit_mailboxes( $app->user, $app->blog ); },
             html => sub { _use_apop( @_ ); }
         },
         category_id => {
@@ -97,6 +98,7 @@ sub list_properties {
 }
 
 sub list_actions {
+    my $app = MT->instance;
     my $actions = {
         'delete' => {
             button      => 1,
@@ -106,6 +108,7 @@ sub list_actions {
             return_args => 1,
             args        => { _type => 'ketaipost_mailbox' },
             order       => 300,
+            condition   => sub { if_can_edit_mailboxes( $app->user, $app->blog ); },
         },
         check => {
             label => 'Mail Check',
@@ -115,6 +118,7 @@ sub list_actions {
             class       => 'icon-action',
             return_args => 1,
             order       => 900,
+            condition   => sub { if_can_edit_mailboxes( $app->user, $app->blog ); },
         },
     };
     return $actions;
@@ -122,6 +126,8 @@ sub list_actions {
 
 sub content_actions {
     my ( $meth, $component ) = @_;
+
+    my $app = MT->instance;
 
     return {
         'new' => {
@@ -133,6 +139,7 @@ sub content_actions {
             args => {
                 _type => 'ketaipost_mailbox'
             },
+            condition   => sub { if_can_edit_mailboxes( $app->user, $app->blog ); },
         },
     };
 }
@@ -142,15 +149,19 @@ sub _address {
     my ( $obj, $app, $opts ) = @_;
     my $edit_uri;
 
-    $edit_uri = $app->uri(
-        mode => 'select_ketaipost_blog',
-        args => {
-            id => $obj->id,
-            blog_id => $obj->blog_id,
-        },
-    );
-
-    '<a href="'. $edit_uri .'" class="mt-open-dialog">'. encode_html( $obj->address ) .'</a>';
+    if ( if_can_edit_mailboxes( $app->user, $app->blog ) ) {
+        $edit_uri = $app->uri(
+            mode => 'select_ketaipost_blog',
+            args => {
+                id => $obj->id,
+                blog_id => $obj->blog_id,
+            },
+        );
+        
+        '<a href="'. $edit_uri .'" class="mt-open-dialog">'. encode_html( $obj->address ) .'</a>';
+    } else {
+        encode_html( $obj->address )
+    }
 }
 
 sub _category {

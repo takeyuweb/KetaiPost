@@ -5,7 +5,7 @@ use base 'Exporter';
 
 our @EXPORT_OK = qw( log_debug log_info log_error get_blog_setting get_website_setting get_system_setting get_setting
                      use_exiftool use_magick use_gmap use_emoji use_ffmpeg use_escape if_can_administer_blog
-                     update_or_create_ketaipost_author if_can_edit_ketaipost_author if_can_edit_mailboxes
+                     update_or_create_ketaipost_author if_can_edit_ketaipost_author if_can_edit_mailboxes if_can_view_mailbox_addresses
                      if_can_on_blog if_module_exists get_module_version );
 
 use MT;
@@ -300,10 +300,27 @@ sub if_can_edit_mailboxes {
     if_can_administer_blog( $user, $blog );
 }
 
+# 受付先メールアドレス一覧を表示できるか
+sub if_can_view_mailbox_addresses {
+    my ( $user, $blog ) = @_;
+    my $app = MT->instance();
+
+    if ( $blog && ( ref $blog ne 'MT::Blog' ) ) {
+        $blog = undef;
+    }
+    $blog = $app->blog unless $blog;
+    return 1 if $user->is_superuser;
+
+    return 1 if if_can_administer_blog( $user, $blog );
+    
+    if_can_on_blog( $user, $blog, 'create_post' );
+}
+
 # 指定のブログで指定の操作が可能か
 # if_can_on_blog( $user, $blog, 'create_post' );
 sub if_can_on_blog {
     my ( $user, $blog, $action ) = @_;
+    return 0 unless $blog;
     my $perms = MT::Permission->load({
         blog_id => $blog->id,
         author_id => $user->id});

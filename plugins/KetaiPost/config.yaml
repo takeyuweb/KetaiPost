@@ -2,7 +2,7 @@ l10n_class: KetaiPost::L10N
 id: KetaiPost
 key: ketaipost
 name: KetaiPost
-version: 1.0.0
+version: 1.0.1
 author_name: Yuichi Takeuchi
 author_link: http://takeyu-web.com/
 doc_link: http://takeyu-web.com/download/mt5-ketaipost/cat65/
@@ -147,7 +147,7 @@ settings:
   # サムネイルの横幅
   thumbnail_size:
     scope: blog
-    default: 240
+    default: 0
   sys_thumbnail_size:
     scope: system
     default: 240

@@ -38,6 +38,7 @@ use KetaiPost::Plugin;
     'Do you add all authors?' => 'すべてのユーザーを送信元として登録しますか？',
     'Do you add blog authors?' => 'あなたが管理するブログのメンバーを送信元として登録しますか？',
     '(Not Permitted)' => '（表示する権限がありません）',
+    '(Any addresses)' => '（未登録のすべてのメールアドレス）',
 );
 
 1;

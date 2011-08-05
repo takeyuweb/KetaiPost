@@ -152,7 +152,7 @@ sub _address {
     );
 
     if_can_edit_ketaipost_author( $app->user, $obj ) ?
-      '<a href="'. $edit_uri .'" class="mt-open-dialog">'. encode_html( $obj->address ) .'</a>' :
+      '<a href="'. $edit_uri .'" class="mt-open-dialog">'. encode_html( $obj->address ? $obj->address : $plugin->translate( '(Any addresses)' ) ) .'</a>' :
         $plugin->translate( '(Not Permitted)' );
 }
 

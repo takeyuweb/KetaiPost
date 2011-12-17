@@ -667,7 +667,7 @@ sub _extract_mail_entity {
             my $type = $part->mime_type;
             log_debug("part: $type (bodyhandle ".($part->bodyhandle ? 'found' : 'not found').")");
             
-            if ( $type =~ /multipart\/alternative/ ) {
+            if ( $type =~ /multipart\/alternative/ || $type =~ /multipart\/related/ ) {
                 my ($alt_text, $ref_alt_images, $ref_alt_movies) = $self->_extract_mail_entity( $carrier, $part, $default_charset );
                 $text .= $alt_text;
                 push(@images, @$ref_alt_images);

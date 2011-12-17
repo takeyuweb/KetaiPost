@@ -39,6 +39,8 @@ use KetaiPost::Plugin;
     'Do you add blog authors?' => 'あなたが管理するブログのメンバーを送信元として登録しますか？',
     '(Not Permitted)' => '（表示する権限がありません）',
     '(Any addresses)' => '（未登録のすべてのメールアドレス）',
+
+    "Unable to generate a temporary directory ([_1]). Use the '/ tmp'." => '一時ディレクトリを置く「[_1]」を作成できません。デフォルトの「/tmp」を使用します。',
 );
 
 1;

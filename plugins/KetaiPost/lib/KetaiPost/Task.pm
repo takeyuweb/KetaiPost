@@ -41,7 +41,23 @@ sub run {
     my ( $terms, $params ) = @_;
 
     # 一時ディレクトリの準備
-    $self->{tempdir} = File::Temp->newdir('', {CLEANUP => 1});
+    my $tempdir = get_system_setting( 'tempdir' ) || '/tmp';
+    unless ( -d $tempdir ) {
+        eval {
+            require File::Path;
+            File::Path::mkpath $tempdir;
+        };
+        if ( my $errstr = $@ ) {
+            MT->log({
+                level => MT::Log::ERROR(),
+                message => $plugin->translate(
+                    "Unable to generate a temporary directory ([_1]). Use the '/ tmp'.",
+                    $tempdir ),
+            });
+            $tempdir = '/tmp';
+        }
+    }
+    $self->{tempdir} = File::Temp->newdir( 'ketaipost_XXXXXXXX', DIR => $tempdir );
     log_debug("一時ディレクトリ ".$self->{tempdir}." を作成しました。");
     
     $self->process( $terms, $params );

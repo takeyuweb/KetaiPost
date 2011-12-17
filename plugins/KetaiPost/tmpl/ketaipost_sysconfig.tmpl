@@ -102,6 +102,13 @@
     <input type="radio" id="sync_authors_0" name="sys_sync_authors" value="0" checked="checked" /><label for="sync_authors_0">しない</label>
   </mt:if>
 </mtapp:setting>
+<mtapp:setting
+   id="sys_tempdir"
+   label="一時ディレクトリ:"
+   show_hint="1"
+   hint="メール受信処理の一時ファイル置き場。デフォルトは /tmp">
+  <input type="text" name="sys_tempdir" value="<mt:var name="sys_tempdir" encode_html="1" />" class="full" />
+</mtapp:setting>
 <mtapp:setting id="use_debuglog" label="デバッグログ出力:">
   <mt:if name="sys_use_debuglog">
     <input type="radio" id="use_debuglog_1" name="sys_use_debuglog" value="1" checked="checked" /><label for="use_debuglog_1">する</label>&nbsp;

@@ -221,6 +221,9 @@ settings:
   sys_enable_escape:
     scope: system
     default: 2
+  sys_tempdir:
+    scope: system
+    default: /tmp
 
 blog_config_template: ketaipost_config.tmpl
 system_config_template: ketaipost_sysconfig.tmpl

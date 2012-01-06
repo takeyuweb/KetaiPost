@@ -2,7 +2,7 @@ l10n_class: KetaiPost::L10N
 id: KetaiPost
 key: ketaipost
 name: KetaiPost
-version: 1.0.2
+version: 1.0.3
 author_name: Yuichi Takeuchi
 author_link: http://takeyu-web.com/
 doc_link: http://takeyu-web.com/download/mt5-ketaipost/cat65/
@@ -224,6 +224,16 @@ settings:
   sys_tempdir:
     scope: system
     default: /tmp
+  # Xatena記法
+  # 0 継承
+  # 1 しない
+  # 2 する
+  enable_xatena:
+    scope: blog
+    default: 0
+  sys_enable_xatena:
+    scope: system
+    default: 1
 
 blog_config_template: ketaipost_config.tmpl
 system_config_template: ketaipost_sysconfig.tmpl

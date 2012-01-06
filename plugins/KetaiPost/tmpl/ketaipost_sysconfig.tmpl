@@ -89,6 +89,18 @@
     「する」に設定すると、メール文中のHTMLをエスケープ（サニタイズ）します。信頼できるユーザ以外の投稿を許可する場合は「する」にしてください。
   </mt:if>
 </mtapp:setting>
+<mtapp:setting id="enable_xatena" label="はてな記法:">
+  <mt:if name="sys_enable_xatena" eq="2">
+    <input type="radio" id="enable_xatena_2" name="sys_enable_xatena" value="2" checked="checked" /><label for="enable_xatena_2">する</label>&nbsp;
+    <input type="radio" id="enable_xatena_1" name="sys_enable_xatena" value="1" /><label for="enable_xatena_1">しない</label><br />
+    「する」に設定すると、メール文中のはてな記法をXatenaパーサでHTMLに変換します。（要 Text::Xatenaモジュール）
+  </mt:if>
+  <mt:if name="sys_enable_xatena" eq="1">
+    <input type="radio" id="enable_xatena_2" name="sys_enable_xatena" value="2" /><label for="enable_xatena_2">する</label>&nbsp;
+    <input type="radio" id="enable_xatena_1" name="sys_enable_xatena" value="1" checked="checked" /><label for="enable_xatena_1">しない</label><br />
+    「する」に設定すると、メール文中のはてな記法をXatenaパーサでHTMLに変換します。（要 Text::Xatenaモジュール）
+  </mt:if>
+</mtapp:setting>
 <mtapp:setting
    id="sync_authors"
    label="ユーザーの自動登録:"

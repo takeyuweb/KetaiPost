@@ -113,3 +113,24 @@
     「する」に設定すると、メール文中のHTMLをエスケープ（サニタイズ）します。信頼できるユーザ以外の投稿を許可する場合は「する」にしてください。
   </mt:unless>
 </mtapp:setting>
+
+<mtapp:setting id="enable_xatena" label="はてな記法:">
+  <mt:if name="enable_xatena" eq="2">
+    <input type="radio" id="enable_xatena_2" name="enable_xatena" value="2" checked="checked" /><label for="enable_xatena_2">する</label>&nbsp;
+    <input type="radio" id="enable_xatena_1" name="enable_xatena" value="1" /><label for="enable_xatena_1">しない</label>&nbsp;
+    <input type="radio" id="enable_xatena_0" name="enable_xatena" value="0" /><label for="enable_xatena_0">親の設定を継承</label><br />
+    「する」に設定すると、メール文中のはてな記法をXatenaパーサでHTMLに変換します。（要 Text::Xatenaモジュール）
+  </mt:if>
+  <mt:if name="enable_xatena" eq="1">
+    <input type="radio" id="enable_xatena_2" name="enable_xatena" value="2" /><label for="enable_xatena_2">する</label>&nbsp;
+    <input type="radio" id="enable_xatena_1" name="enable_xatena" value="1" checked="checked" /><label for="enable_xatena_1">しない</label>&nbsp;
+    <input type="radio" id="enable_xatena_0" name="enable_xatena" value="0" /><label for="enable_xatena_0">親の設定を継承</label><br />
+    「する」に設定すると、メール文中のはてな記法をXatenaパーサでHTMLに変換します。（要 Text::Xatenaモジュール）
+  </mt:if>
+  <mt:unless name="enable_xatena">
+    <input type="radio" id="enable_xatena_2" name="enable_xatena" value="2" /><label for="enable_xatena_2">する</label>&nbsp;
+    <input type="radio" id="enable_xatena_1" name="enable_xatena" value="1" /><label for="enable_xatena_1">しない</label>&nbsp;
+    <input type="radio" id="enable_xatena_0" name="enable_xatena" value="0" checked="checked" /><label for="enable_xatena_0">親の設定を継承</label><br />
+    「する」に設定すると、メール文中のはてな記法をXatenaパーサでHTMLに変換します。（要 Text::Xatenaモジュール）
+  </mt:unless>
+</mtapp:setting>

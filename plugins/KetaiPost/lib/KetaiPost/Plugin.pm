@@ -5,11 +5,13 @@ use warnings;
 
 use utf8;
 
+use lib $ENV{MT_HOME} ? "$ENV{MT_HOME}/plugins/KetaiPost/extlib" : 'plugins/KetaiPost/extlib';
+
 use MT;
 use MT::Util qw( encode_html );
 use KetaiPost::Util qw( if_can_administer_blog get_system_setting log_debug
                         if_can_edit_ketaipost_author if_can_edit_mailboxes if_can_view_mailbox_addresses
-                        if_module_exists get_module_version);
+                        if_module_exists get_module_version get_module_error );
 
 our $plugin = MT->component( 'KetaiPost' );
 
@@ -77,12 +79,13 @@ sub description {
         ['Image::ExifTool', 1, '一部の携帯電話が送信する写真の向きを補正するために使用します。<br />また、写真からGPS位置情報を抽出するのにも使用します。'],
         ['Image::Magick', 1, '一部の携帯電話が送信する写真の向きを補正するために使用します。'],
         ['Encode::JP::Emoji', 1, '絵文字変換に利用します。'],
-        ['Encode::JP::Emoji::FB_EMOJI_TYPECAST', 1, '絵文字変換に利用します。']
+        ['Encode::JP::Emoji::FB_EMOJI_TYPECAST', 1, '絵文字変換に利用します。'],
+        ['Text::Xatena', 1, 'はてな記法っぽい記法を利用する場合に必要です。'],
     ];
     foreach my $ref_option(@$ref_modules) {
         my $name = $ref_option->[0];
         my $line = '<li>';
-        $line .= "$name => 利用".(if_module_exists( $name ) ? 'できます(バージョン:'.get_module_version($name).')'  : 'できません');
+        $line .= "$name => 利用".(if_module_exists( $name ) ? 'できます(バージョン:'.get_module_version($name).')'  : 'できません(エラー：'.get_module_error($name).')');
         $line .= "(Optional)" if $ref_option->[1];
         $line .= "<br />".$ref_option->[2] if $ref_option->[2];
         $line .= "</li>";
@@ -91,7 +94,7 @@ sub description {
     push(@lines, '</ul>');
     push(@lines, '</div>');
     
-    join("", @lines);
+    join("", @lines) . "<br />依存モジュールは MT_DIR/extlib のほか、plugins/KetaiPost/extlib に置いても動くようになりました。";
 }
 
 1;

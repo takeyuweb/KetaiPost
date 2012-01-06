@@ -4,9 +4,9 @@ use strict;
 use base 'Exporter';
 
 our @EXPORT_OK = qw( log_debug log_info log_error get_blog_setting get_website_setting get_system_setting get_setting
-                     use_exiftool use_magick use_gmap use_emoji use_ffmpeg use_escape if_can_administer_blog
+                     use_exiftool use_magick use_gmap use_emoji use_ffmpeg use_escape use_xatena if_can_administer_blog
                      update_or_create_ketaipost_author if_can_edit_ketaipost_author if_can_edit_mailboxes if_can_view_mailbox_addresses
-                     if_can_on_blog if_module_exists get_module_version );
+                     if_can_on_blog if_module_exists get_module_version get_module_error );
 
 use MT;
 use MT::Log;
@@ -25,6 +25,13 @@ sub if_module_exists {
 sub get_module_version {
     my ($name) = @_;
     if_module_exists( $name ) ? eval "require $name; return \$@{[$name]}::VERSION;" : undef;
+}
+
+sub get_module_error {
+    my ($name) = @_;
+    return undef if if_module_exists( $name );
+    eval "use $name;";
+    return $@;
 }
 
 # ライブラリ使用チェック
@@ -105,6 +112,19 @@ sub use_escape {
         $plugin->{enable_escape} = 0;
     }
     $plugin->{enable_escape};
+}
+
+# はてな記法を使うか
+sub use_xatena {
+    my ($blog_id) = @_;
+    return $plugin->{enable_xatena} if defined($plugin->{enable_xatena});
+
+    if (get_setting($blog_id, 'enable_xatena') == 2) {
+        $plugin->{enable_xatena} = 1;
+    } else {
+        $plugin->{enable_xatena} = 0;
+    }
+    $plugin->{enable_xatena};
 }
 
 # 機能に関するチェック ここまで

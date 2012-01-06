@@ -24,7 +24,7 @@ use MT::App::CMS;
 use MT::WeblogPublisher;
 
 use KetaiPost::Util qw(log_debug log_info log_error get_blog_setting get_website_setting get_system_setting get_setting
-                       use_exiftool use_magick use_gmap use_emoji use_ffmpeg use_escape if_can_on_blog );
+                       use_exiftool use_magick use_gmap use_emoji use_ffmpeg use_escape use_xatena if_can_on_blog );
 
 our $plugin = MT->component( 'KetaiPost' );
 
@@ -170,6 +170,48 @@ sub process {
                         $text =~ s/\n/<br \/>/g;
                     }
                 }
+
+                if ( use_xatena( $blog->id ) ) {
+                    log_debug( "はてな記法が有効です。" );
+                    
+                    $text =~ s/<br \/>\n?/\n/g;
+
+                    require Text::Xatena;
+                    my $syntaxes = [
+                        'Text::Xatena::Node::SeeMore',
+                        'Text::Xatena::Node::SuperPre',
+                        'Text::Xatena::Node::StopP',
+                        'Text::Xatena::Node::Blockquote',
+                        'Text::Xatena::Node::Pre',
+                        'Text::Xatena::Node::List',
+                        'Text::Xatena::Node::DefinitionList',
+                        'Text::Xatena::Node::Table',
+                        'Text::Xatena::Node::Section',
+                        'Text::Xatena::Node::Comment',
+                        'Text::Xatena::Node::KetaiPost'
+                    ];
+                    my $thx = Text::Xatena->new( syntaxes => $syntaxes );
+                    
+                    #my $inline = Text::Xatena::Inline->new;
+                    require Text::Xatena::Inline::KetaiPost;
+                    my $inline = Text::Xatena::Inline::KetaiPost->new;
+                    
+                    my $formatted = $thx->format( $text , inline => $inline );
+                    my $out = '';
+                    $out .= '<div class="body">';
+                    $out .= $formatted;
+                    $out .= '</div>';
+                    $out .= '<div class="notes">';
+                    for my $footnote (@{ $inline->footnotes }) {
+                        $out .= sprintf('<div class="footnote" id="#fn%d">*%d: %s</div>',
+                                        $footnote->{number},
+                                        $footnote->{number},
+                                        $footnote->{note},
+                                    );
+                    }
+                    $text = $out;
+                }
+
                 my $entry = $self->create_entry($blog, $author, $subject, $text, $category);
                 next unless $entry;
                 

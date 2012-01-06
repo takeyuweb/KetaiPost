@@ -195,8 +195,7 @@ sub process {
                     #my $inline = Text::Xatena::Inline->new;
                     require Text::Xatena::Inline::KetaiPost;
                     my $inline = Text::Xatena::Inline::KetaiPost->new;
-                    
-                    my $formatted = $thx->format( $text , inline => $inline );
+                    my $formatted = $thx->format( decode( 'utf8', $text ) , inline => $inline );
                     my $out = '';
                     $out .= '<div class="body">';
                     $out .= $formatted;
@@ -209,7 +208,7 @@ sub process {
                                         $footnote->{note},
                                     );
                     }
-                    $text = $out;
+                    $text = encode( 'utf8', $out );
                 }
 
                 my $entry = $self->create_entry($blog, $author, $subject, $text, $category);

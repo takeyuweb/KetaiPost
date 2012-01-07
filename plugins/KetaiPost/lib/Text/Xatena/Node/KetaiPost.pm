@@ -37,7 +37,7 @@ sub as_html {
         ? }
     ], {
         style    => encode_entities( $self->style ),
-        content => escape_html(join "", @{ $self->children })
+        content => $self->SUPER::as_html( $context, %opts )
     });
 }
 

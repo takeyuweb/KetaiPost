@@ -8,7 +8,7 @@ author_link: http://takeyu-web.com/
 doc_link: http://takeyu-web.com/download/mt5-ketaipost/cat65/
 description: <__trans phrase="_PLUGIN_DESCRIPTION">
 
-schema_version: 20110727.007
+schema_version: 20120109.001
 
 applications:
   cms:

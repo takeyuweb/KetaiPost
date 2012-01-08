@@ -134,3 +134,24 @@
     「する」に設定すると、メール文中のはてな記法をXatenaパーサでHTMLに変換します。（要 Text::Xatenaモジュール）
   </mt:unless>
 </mtapp:setting>
+
+<mtapp:setting id="enable_notify" label="公開通知:">
+  <mt:if name="enable_notify" eq="2">
+    <input type="radio" id="enable_notify_2" name="enable_notify" value="2" checked="checked" /><label for="enable_notify_2">する</label>&nbsp;
+    <input type="radio" id="enable_notify_1" name="enable_notify" value="1" /><label for="enable_notify_1">しない</label>&nbsp;
+    <input type="radio" id="enable_notify_0" name="enable_notify" value="0" /><label for="enable_notify_0">親の設定を継承</label><br />
+    「する」に設定すると、MT標準のアドレス帳に登録されているメールアドレス宛に、公開通知を送信します。この機能はアドレス帳が有効になっていて、投稿された記事を即時公開する設定になっている場合のみ有効です。（公式ドキュメント：<a href="http://www.movabletype.jp/documentation/notification.html" target="_blank">アドレス帳</a>）
+  </mt:if>
+  <mt:if name="enable_notify" eq="1">
+    <input type="radio" id="enable_notify_2" name="enable_notify" value="2" /><label for="enable_notify_2">する</label>&nbsp;
+    <input type="radio" id="enable_notify_1" name="enable_notify" value="1" checked="checked" /><label for="enable_notify_1">しない</label>&nbsp;
+    <input type="radio" id="enable_notify_0" name="enable_notify" value="0" /><label for="enable_notify_0">親の設定を継承</label><br />
+    「する」に設定すると、MT標準のアドレス帳に登録されているメールアドレス宛に、公開通知を送信します。この機能はアドレス帳が有効になっていて、投稿された記事を即時公開する設定になっている場合のみ有効です。（公式ドキュメント：<a href="http://www.movabletype.jp/documentation/notification.html" target="_blank">アドレス帳</a>）
+  </mt:if>
+  <mt:unless name="enable_notify">
+    <input type="radio" id="enable_notify_2" name="enable_notify" value="2" /><label for="enable_notify_2">する</label>&nbsp;
+    <input type="radio" id="enable_notify_1" name="enable_notify" value="1" /><label for="enable_notify_1">しない</label>&nbsp;
+    <input type="radio" id="enable_notify_0" name="enable_notify" value="0" checked="checked" /><label for="enable_notify_0">親の設定を継承</label><br />
+    「する」に設定すると、MT標準のアドレス帳に登録されているメールアドレス宛に、公開通知を送信します。この機能はアドレス帳が有効になっていて、投稿された記事を即時公開する設定になっている場合のみ有効です。（公式ドキュメント：<a href="http://www.movabletype.jp/documentation/notification.html" target="_blank">アドレス帳</a>）
+  </mt:unless>
+</mtapp:setting>

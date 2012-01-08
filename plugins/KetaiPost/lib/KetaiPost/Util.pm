@@ -3,8 +3,8 @@ package KetaiPost::Util;
 use strict;
 use base 'Exporter';
 
-our @EXPORT_OK = qw( log_debug log_info log_error get_blog_setting get_website_setting get_system_setting get_setting
-                     use_exiftool use_magick use_gmap use_emoji use_ffmpeg use_escape use_xatena if_can_administer_blog
+our @EXPORT_OK = qw( log_debug log_info log_error log_security get_blog_setting get_website_setting get_system_setting get_setting
+                     use_exiftool use_magick use_gmap use_emoji use_ffmpeg use_escape use_xatena use_notify if_can_administer_blog
                      update_or_create_ketaipost_author if_can_edit_ketaipost_author if_can_edit_mailboxes if_can_view_mailbox_addresses
                      if_can_on_blog if_module_exists get_module_version get_module_error );
 
@@ -127,6 +127,23 @@ sub use_xatena {
     $plugin->{enable_xatena};
 }
 
+# 公開通知
+sub use_notify {
+    my ($blog_id) = @_;
+    my $app = MT->instance;
+    return 0 unless $app->config->EnableAddressBook;
+
+    return $plugin->{enable_notify} if defined($plugin->{enable_notify});
+
+    if (get_setting($blog_id, 'enable_notify') == 2) {
+        $plugin->{enable_notify} = 1;
+    } else {
+        $plugin->{enable_notify} = 0;
+    }
+
+    $plugin->{enable_notify};
+}
+
 # 機能に関するチェック ここまで
 
 # 「システム」の設定値を取得
@@ -215,7 +232,7 @@ sub log_debug {
     };
     $ref_options = {%{$ref_default_options}, %{$ref_options}};
 
-    write_log('[debug]'.$msg, $ref_options);
+    write_log($msg, $ref_options);
 }
 
 sub log_error {
@@ -228,8 +245,22 @@ sub log_error {
     };
     $ref_options = {%{$ref_default_options}, %{$ref_options}};
 
-    write_log('[error]'.$msg, $ref_options);
+    write_log($msg, $ref_options);
 }
+
+sub log_security {
+    my ($msg, $ref_options) = @_;
+    return unless defined($msg);
+    
+    $ref_options ||= {};
+    my $ref_default_options = {
+        level => MT::Log::SECURITY(),
+    };
+    $ref_options = {%{$ref_default_options}, %{$ref_options}};
+
+    write_log($msg, $ref_options);
+}
+
 
 sub if_can_administer_blog {
     my ( $user, $blog ) = @_;

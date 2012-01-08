@@ -23,8 +23,10 @@ use MT::ConfigMgr;
 use MT::App::CMS;
 use MT::WeblogPublisher;
 
-use KetaiPost::Util qw(log_debug log_info log_error get_blog_setting get_website_setting get_system_setting get_setting
-                       use_exiftool use_magick use_gmap use_emoji use_ffmpeg use_escape use_xatena if_can_on_blog );
+use KetaiPost::Util qw(log_debug log_info log_error log_security get_blog_setting get_website_setting get_system_setting get_setting
+                       use_exiftool use_magick use_gmap use_emoji use_ffmpeg use_escape use_xatena use_notify if_can_on_blog );
+
+use MT::Util qw( is_valid_email );
 
 our $plugin = MT->component( 'KetaiPost' );
 
@@ -546,7 +548,9 @@ sub process {
     # まとめて再構築
     # 再構築時点でデータをリロードしないとうまく機能しない
     foreach my $entry_id(@entry_ids) {
-        $self->rebuild_entry_page(MT->model( 'entry' )->load($entry_id));
+        my $obj = MT->model( 'entry' )->load( $entry_id );
+        $self->rebuild_entry_page( $obj );
+        $self->send_entry_notify( $obj );
     }
 
     1;
@@ -920,7 +924,7 @@ sub rebuild_entry_page {
     my $self = shift;
     my ($entry) = @_;
 
-    return unless $entry->status == 2; # 公開(2)
+    return unless $entry->status == MT::Entry::RELEASE();
     
     my $publisher = MT::WeblogPublisher->new;
     my $ret = $publisher->rebuild_entry(
@@ -935,6 +939,111 @@ sub rebuild_entry_page {
     });
 
     $ret;
+}
+
+# 記事が「公開」なら通知
+sub send_entry_notify {
+    my $self = shift;
+    my ( $entry ) = @_;
+
+    my $app = MT->instance;
+
+    unless ( use_notify( $entry->blog_id ) ) {
+        log_debug( '公開通知の送信が無効か、または利用できません。', { blog_id => $entry->blog_id } );
+        return 0;
+    }
+    log_debug( '公開通知の送信が有効です。', { blog_id => $entry->blog_id } );
+
+    return 0 unless $entry->status == MT::Entry::RELEASE();
+
+    my $entry_id = $entry->id or return 0;
+    
+    my $blog = MT->model( 'blog' )->load( $entry->blog_id );
+
+    my $author = $entry->author;
+
+    my $cols = 72;
+    my %params;
+    $params{ blog }   = $blog;
+    $params{ entry }  = $entry;
+    $params{ author } = $author;
+
+    $params{ message } = 'メール投稿により記事を公開しました。（このメールは自動送信です。）';
+
+    $params{ send_body } = 1;
+
+    my $addrs;
+    my $iter = MT->model( 'notification' )->load_iter( { blog_id => $blog->id } );
+    while ( my $note = $iter->() ) {
+        next unless is_valid_email( $note->email );
+        $addrs->{ $note->email } = 1;
+    }
+
+    unless ( keys %$addrs ) {
+        log_info( $app->translate( "No valid recipients found for the entry notification." ), {
+            blog_id => $entry->blog_id,
+            author_id => $entry->author_id
+        });
+        return 0;
+    }
+
+    my $body = $app->build_email( 'notify-entry.tmpl', \%params );
+
+    my $subj
+        = $app->translate( "[_1] Update: [_2]", $blog->name, $entry->title );
+    if ( $app->current_language ne 'ja' ) {
+        $subj =~ s![\x80-\xFF]!!g;
+    }
+
+    my $from = $author->email || $app->config->EmailAddressMain;
+    my %head = (
+        id      => 'notify_entry',
+        Subject => $subj,
+        $from ? ( From => $from ) : (),
+    );
+
+    my $charset = $app->config( 'MailEncoding' ) || $app->charset;
+    $head{ 'Content-Type' } = qq(text/plain; charset="$charset");
+    my $i = 1;
+    require MT::Mail;
+
+    log_debug( 'addrs:' . Data::Dumper->Dump( [ $addrs ] ) );
+    log_debug( 'header: '.Data::Dumper->Dump( [\%head] ) . ' body:' . $body );
+
+    foreach my $email ( keys %{$addrs} ) {
+        next unless $email;
+        if ( $app->config( 'EmailNotificationBcc' ) ) {
+            push @{ $head{Bcc} }, $email;
+            if ( $i++ % 20 == 0 ) {
+                unless ( MT::Mail->send( \%head, $body ) ) {
+                    log_error( $app->translate( "Error sending mail ([_1]); try another MailTransfer setting?",
+                                                MT::Mail->errstr
+                                              ) );
+                    return 0;
+                }
+                @{ $head{ Bcc } } = ();
+            }
+        } else {
+            $head{ To } = $email;
+            unless ( MT::Mail->send( \%head, $body ) ) {
+                log_error( $app->translate( "Error sending mail ([_1]); try another MailTransfer setting?",
+                                            MT::Mail->errstr
+                                          ) );
+                return 0;
+            }
+            delete $head{To};
+        }
+    }
+
+    if ( $head{Bcc} && @{ $head{Bcc} } ) {
+        unless ( MT::Mail->send( \%head, $body ) ) {
+            log_error( $app->translate( "Error sending mail ([_1]); try another MailTransfer setting?",
+                                        MT::Mail->errstr
+                                      ) );
+            return 0;
+        }
+    }
+    return 1;
 }
 
 1;

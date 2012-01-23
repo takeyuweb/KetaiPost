@@ -101,16 +101,26 @@
   </mt:if>
 </mtapp:setting>
 
-<mtapp:setting id="enable_notify" label="公開通知:">
+<mtapp:setting
+    id="enable_notify"
+    label="公開通知:"
+    show_hint="1"
+    hint="「する」に設定すると、MT標準のアドレス帳に登録されているメールアドレス宛に、公開通知を送信します。この機能はアドレス帳が有効になっていて、投稿された記事を即時公開する設定になっている場合のみ有効です。（公式ドキュメント：<a href="http://www.movabletype.jp/documentation/notification.html" target="_blank">アドレス帳</a>）">
   <mt:if name="sys_enable_notify" eq="2">
     <input type="radio" id="enable_notify_2" name="sys_enable_notify" value="2" checked="checked" /><label for="enable_notify_2">する</label>&nbsp;
-    <input type="radio" id="enable_notify_1" name="sys_enable_notify" value="1" /><label for="enable_notify_1">しない</label><br />
-    「する」に設定すると、MT標準のアドレス帳に登録されているメールアドレス宛に、公開通知を送信します。この機能はアドレス帳が有効になっていて、投稿された記事を即時公開する設定になっている場合のみ有効です。（公式ドキュメント：<a href="http://www.movabletype.jp/documentation/notification.html" target="_blank">アドレス帳</a>）
+    <input type="radio" id="enable_notify_1" name="sys_enable_notify" value="1" /><label for="enable_notify_1">しない</label>
    <mt:else>
     <input type="radio" id="enable_notify_2" name="sys_enable_notify" value="2" /><label for="enable_notify_2">する</label>&nbsp;
-    <input type="radio" id="enable_notify_1" name="sys_enable_notify" value="1" checked="checked" /><label for="enable_notify_1">しない</label><br />
-    「する」に設定すると、MT標準のアドレス帳に登録されているメールアドレス宛に、公開通知を送信します。この機能はアドレス帳が有効になっていて、投稿された記事を即時公開する設定になっている場合のみ有効です。（公式ドキュメント：<a href="http://www.movabletype.jp/documentation/notification.html" target="_blank">アドレス帳</a>）
+    <input type="radio" id="enable_notify_1" name="sys_enable_notify" value="1" checked="checked" /><label for="enable_notify_1">しない</label>
   </mt:if>
+</mtapp:setting>
+
+<mtapp:setting
+    id="notify_subject"
+    label="公開通知タイトル:"
+    show_hint="1"
+    hint="公開通知メールの件名。MTBlog系およびMTEntry系テンプレートタグが利用できます。">
+  <input type="text" name="sys_notify_subject" value="<mt:var name="sys_notify_subject" encode_html="1" />" class="full-width" />
 </mtapp:setting>
 
 <mtapp:setting

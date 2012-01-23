@@ -155,3 +155,11 @@
     「する」に設定すると、MT標準のアドレス帳に登録されているメールアドレス宛に、公開通知を送信します。この機能はアドレス帳が有効になっていて、投稿された記事を即時公開する設定になっている場合のみ有効です。（公式ドキュメント：<a href="http://www.movabletype.jp/documentation/notification.html" target="_blank">アドレス帳</a>）
   </mt:unless>
 </mtapp:setting>
+
+<mtapp:setting
+    id="notify_subject"
+    label="公開通知タイトル:"
+    show_hint="1"
+    hint="公開通知メールの件名。MTBlog系およびMTEntry系テンプレートタグが利用できます。空白にすると親の設定を継承します。">
+  <input type="text" name="notify_subject" value="<mt:var name="notify_subject" encode_html="1" />" class="full-width" />
+</mtapp:setting>

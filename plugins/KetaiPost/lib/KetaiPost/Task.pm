@@ -889,13 +889,19 @@ sub load_entry_tmpl {
 # 本文の構築
 sub build_entry_text {
     my $self = shift;
-    my ( $entry ) = @_;
+    my ( $entry, $tmpl ) = @_;
     
     my $blog = MT->model( 'blog' )->load( $entry->blog_id );
     my $category = $entry->category;
     
-    my $tmpl = $self->load_entry_tmpl( $entry->blog_id );
-    my $ctx = $tmpl->context;
+    $tmpl = $self->load_entry_tmpl( $entry->blog_id ) unless $tmpl;
+    
+    $tmpl = $tmpl->text
+    	if ( ( ref $tmpl ) eq 'MT::Template' );
+    
+    require MT::Template::Context;
+	my $ctx = MT::Template::Context->new;
+
     $ctx->stash( 'entry', $entry );
     $ctx->stash( 'blog',  $blog );
     $ctx->stash( 'category', $category ) if $category;
@@ -914,9 +920,20 @@ sub build_entry_text {
         $params{thumbnail_square} = 1;
     }
     
-    my $html = $tmpl->output( \%params );
-    my $error = $tmpl->errstr;
-    return ( $html, $error );
+    #my $html = $tmpl->output( \%params );
+    #my $error = $tmpl->errstr;
+    
+    for my $key ( keys %params ) {
+        $ctx->{ __stash }->{ vars }->{ $key } = $params{ $key };
+    }
+    my $build = MT::Builder->new;
+    my $tokens = $build->compile( $ctx, $tmpl );
+    return ( undef, $build->errstr ) unless ( $tokens );
+
+    my $html = $build->build( $ctx, $tokens );
+    return ( undef, $build->errstr ) unless ( defined $html );
+    
+    return ( $html, undef );
 }
 
 # 記事が「公開」なら再構築
@@ -989,8 +1006,12 @@ sub send_entry_notify {
 
     my $body = $app->build_email( 'notify-entry.tmpl', \%params );
 
-    my $subj
-        = $app->translate( "[_1] Update: [_2]", $blog->name, $entry->title );
+	my $tmpl = get_setting( $blog->id, 'notify_subject' );
+	my ( $subj, $tmpl_error ) = $self->build_entry_text($entry, $tmpl);
+	unless ( defined($subj) ) {
+		log_error($tmpl_error);
+		return;
+	}
     if ( $app->current_language ne 'ja' ) {
         $subj =~ s![\x80-\xFF]!!g;
     }

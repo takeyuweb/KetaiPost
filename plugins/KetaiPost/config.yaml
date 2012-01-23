@@ -2,7 +2,7 @@ l10n_class: KetaiPost::L10N
 id: KetaiPost
 key: ketaipost
 name: KetaiPost
-version: 1.0.4
+version: 1.0.6
 author_name: Yuichi Takeuchi
 author_link: http://takeyu-web.com/
 doc_link: http://takeyu-web.com/download/mt5-ketaipost/cat65/
@@ -244,7 +244,13 @@ settings:
   sys_enable_notify:
     scope: system
     default: 1
-  
+  # 公開通知の件名
+  notify_subject:
+    scope: blog
+    default: ""
+  sys_notify_subject:
+    scope: system
+    default: "<$MTBlogName$> Update: <$MTEntryTitle$>"
 
 blog_config_template: ketaipost_config.tmpl
 system_config_template: ketaipost_sysconfig.tmpl

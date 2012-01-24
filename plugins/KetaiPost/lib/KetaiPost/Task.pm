@@ -210,6 +210,7 @@ sub process {
                                         $footnote->{note},
                                     );
                     }
+                    $out .= '</div>';
                     $text = encode( 'utf8', $out );
                 }
 

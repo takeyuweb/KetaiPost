@@ -446,9 +446,15 @@ sub process {
                             );
                             close($tmppasslog_fh);
 
-                            system("$ffmpeg_path -y -i $tmp_filename -an -r 15 -b 800k -pass 1 -passlogfile $tmppasslog_filename -vcodec flv -f flv $tmpout_filename");
-                            system("$ffmpeg_path -y -i $tmp_filename -ar 44100 -acodec libmp3lame -r 15 -b 800k -pass 2 -passlogfile $tmppasslog_filename -vcodec flv -f flv $tmpout_filename");
-                            my($tmpthumb_fh, $tmpthumb_filename) = File::Temp::tempfile(TEMPLATE => 'image_XXXXXX.jpg');
+                            system("$ffmpeg_path -y -i $tmp_filename -an -pass 1 -passlogfile $tmppasslog_filename -vcodec flv -f flv -b 5M $tmpout_filename");
+                            system("$ffmpeg_path -y -i $tmp_filename -ar 44100 -acodec libmp3lame -pass 2 -passlogfile $tmppasslog_filename -vcodec flv -f flv -b 5M $tmpout_filename");
+
+                            my($tmpthumb_fh, $tmpthumb_filename) = File::Temp::tempfile(
+                                TEMPLATE => 'image_XXXXXX',
+                                SUFFIX => '.jpg',
+                                UNLINK => 1,
+                                DIR => $temp_dir
+                            );
                             close($tmpthumb_fh);
 
                             system("$ffmpeg_path -y -i $tmp_filename -f image2 -ss 1 -r 1 -an -deinterlace $tmpthumb_filename");

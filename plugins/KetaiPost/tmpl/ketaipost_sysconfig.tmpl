@@ -124,6 +124,14 @@
 </mtapp:setting>
 
 <mtapp:setting
+    id="pop_download_mails"
+    label="受信メール数:"
+    show_hint="1"
+    hint="POPサーバーに大量にメールが残っている場合全部落とすと時間が掛かったり拒否されたりするので、新しいものから指定の数だけダウンロードします。通常変更の必要はありません。">
+  <input type="text" name="sys_pop_download_mails" value="<mt:var name="sys_pop_download_mails" encode_html="1" />" class="min" />
+</mtapp:setting>
+
+<mtapp:setting
    id="sync_authors"
    label="ユーザーの自動登録:"
    show_hint="1"

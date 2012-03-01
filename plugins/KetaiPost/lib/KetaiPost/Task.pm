@@ -114,10 +114,20 @@ sub process {
             log_error("$address $host:$port POP3接続に失敗");
             next;
         }
-
+        
+        
+        my $start = 1;
+        if ( my $pop_download_mails = get_system_setting( 'pop_download_mails' ) ) {
+            $start = $count - $pop_download_mails + 1;
+            $start = 1 if $start < 1;
+        }
+        if ( $count > 0 ) {
+            log_debug( "$start - $count 番目のメールを受信します。" );
+        }
+          
         eval {
             
-            for (my $id=1; $id<=$count; $id++) {
+            for (my $id=$start; $id<=$count; $id++) {
             
                 my $message = $pop3->HeadAndBody($id);
                 

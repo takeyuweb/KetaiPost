@@ -255,7 +255,7 @@ sub process {
                         for (my $i=0; $i<@$ref_images; $i++) {
                             my $ref_image = $ref_images->[$i];
                             # 新しいファイル名
-                            my $new_filename = sprintf("%d_%d_%d%s", $entry->id, $now, $i, $ref_image->{ext});
+                            my $new_filename = sprintf("%d_%d_%d.%s", $entry->id, $now, $i, $ref_image->{ext});
                             # ブログルート
                             my $root_path = $blog->site_path; # サーバ内パス
                             my $root_url = $blog->site_url;   # URL
@@ -435,7 +435,7 @@ sub process {
 
                             my($tmp_fh, $tmp_filename) = File::Temp::tempfile(
                                 'movie_XXXXXX',
-                                SUFFIX => $ref_movie->{ext},
+                                SUFFIX => ".@{[ $ref_movie->{ext} ]}",
                                 UNLINK => 1,
                                 DIR => $temp_dir
                             );
@@ -708,13 +708,13 @@ sub _extract_mail_entity {
     my $self = shift;
     my ( $carrier, $entity, $default_charset ) = @_;
     
-    my %imagetypes = ('image/pjpeg' => '.jpg',
-              'image/jpeg' => '.jpg',
-              'image/gif' => '.gif',
-              'image/png' => '.png');
-    my %movietypes = ('video/3gpp2' => '.3gp',
-              'video/3gpp' => '.3gp',
-              'video/mp4' => '.mp4');
+    my %imagetypes = ('image/pjpeg' => 'jpg',
+                      'image/jpeg' => 'jpg',
+                      'image/gif' => 'gif',
+                      'image/png' => 'png');
+    my %movietypes = ('video/3gpp2' => '3gp',
+                      'video/3gpp' => '3gp',
+                      'video/mp4' => 'mp4');
     
     my ($text, @images, @movies);
     

@@ -82,12 +82,19 @@ sub description {
         ['Encode::JP::Emoji::FB_EMOJI_TYPECAST', 1, '絵文字変換に利用します。'],
         ['Text::Xatena', 1, 'はてな記法っぽい記法を利用する場合に必要です。'],
     ];
-    foreach my $ref_option(@$ref_modules) {
+    for ( my $i=0; $i<@$ref_modules; $i++ ) {
+        my $ref_option = $ref_modules->[$i];
         my $name = $ref_option->[0];
+        my $err = get_module_error($name);
+        my $errid = 'ketaipost-module-err'.$i;
         my $line = '<li>';
-        $line .= "$name => 利用".(if_module_exists( $name ) ? 'できます(バージョン:'.get_module_version($name).')'  : 'できません(エラー：'.get_module_error($name).')');
+        $line .= "$name => 利用".(if_module_exists( $name ) ? 'できます(バージョン:'.get_module_version($name).')'  : 'できません(<a href="javascript:void(0);" onclick="jQuery(\'#'.$errid.'\').slideToggle(\'fast\'); return false;">エラーメッセージ</a>)');
         $line .= "(Optional)" if $ref_option->[1];
-        $line .= "<br />".$ref_option->[2] if $ref_option->[2];
+        $line .= "<p>@{[ $ref_option->[2] ]}" if $ref_option->[2];
+        if ( $err ) {
+            $err =~ s/\r?\n/<br>/g;
+            $line .= '<div id="'.$errid.'" style="display: none; border: 1px solid #CCC; background-color: #EFEFEF; padding: 5px; font-size: 0.9em; color: #666;">'.$err.'</div>';
+        }
         $line .= "</li>";
         push(@lines, $line);
     }

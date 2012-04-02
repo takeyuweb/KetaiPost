@@ -347,6 +347,19 @@ sub process {
                             }            
                             log_debug($ref_image->{filename}." を ".$file_path." に書き込みました。");
                         
+                            unless ( get_setting($blog->id, 'remove_exif') == 1 ) {
+                                log_debug('Exif除去有効');
+                                if ( use_magick && -f $file_path ) {
+                                    require Image::Magick;
+                                    my $thumb = Image::Magick->new();
+                                    $thumb->Read( $file_path );
+                                    if ( $thumb->[0] ) {
+                                        $thumb->Profile( name=>"*", profile=>"" );
+                                        $thumb->[0]->Write( filename => $file_path );
+                                    }
+                                }
+                            }
+                        
                             # アイテムの登録
                             my ( $width, $height ) = imgsize( $file_path );
                             my $asset = MT->model( 'image' )->new;

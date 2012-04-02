@@ -57,6 +57,22 @@
     <input type="text" name="sys_player_size" value="<mt:var name="sys_player_size" encode_html="1" />" style="width: 50px;" /> ピクセル
   </mtapp:setting>
 </mtapp:setting>
+
+
+<mtapp:setting
+    id="remove_exif"
+    label="Exif削除:"
+    show_hint="1"
+    hint="「する」に設定すると、添付写真のExifを自動的に削除します。（要Image::Magick）">
+  <mt:if name="sys_remove_exif" eq="2">
+    <input type="radio" id="remove_exif_2" name="sys_remove_exif" value="2" checked="checked" /><label for="remove_exif_2">する</label>&nbsp;
+    <input type="radio" id="remove_exif_1" name="sys_remove_exif" value="1" /><label for="remove_exif_1">しない</label>
+   <mt:else>
+    <input type="radio" id="remove_exif_2" name="sys_remove_exif" value="2" /><label for="remove_exif_2">する</label>&nbsp;
+    <input type="radio" id="remove_exif_1" name="sys_remove_exif" value="1" checked="checked" /><label for="remove_exif_1">しない</label>
+  </mt:if>
+</mtapp:setting>
+
 <mtapp:setting id="thumbnail_shape" label="サムネイルの形状:">
   <mt:if name="sys_thumbnail_shape" eq="2">
     <input type="radio" id="thumbnail_shape_2" name="sys_thumbnail_shape" value="2" checked="checked" /><label for="thumbnail_shape_2">正方形（切り取り）</label>&nbsp;

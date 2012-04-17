@@ -370,7 +370,7 @@ sub check_ketaipost_mailbox {
 
     require KetaiPost::Task;
     my $task = KetaiPost::Task->new();
-    $task->run( { id => @ids } );
+    $task->run( { id => @ids }, {}, { combine_accounts => 0 } );
 
     $app->call_return;
 }

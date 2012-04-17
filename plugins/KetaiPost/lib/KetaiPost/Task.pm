@@ -40,7 +40,7 @@ sub new {
 
 sub run {
     my $self = shift;
-    my ( $terms, $params ) = @_;
+    my ( $terms, $params, $args ) = @_;
 
     # 一時ディレクトリの準備
     my $tempdir = get_system_setting( 'tempdir' ) || '/tmp';
@@ -62,14 +62,19 @@ sub run {
     $self->{tempdir} = File::Temp->newdir( 'ketaipost_XXXXXXXX', DIR => $tempdir );
     log_debug("一時ディレクトリ ".$self->{tempdir}." を作成しました。");
     
-    $self->process( $terms, $params );
+    $self->process( $terms, $params, $args );
     
     1;
 }
 
 sub process {
     my $self = shift;
-    my ( $terms, $params ) = @_;
+    my ( $terms, $params, $args ) = @_;
+
+    $args ||= {};
+    my %opts = ( combine_accounts => 1 );
+    %opts = ( %opts, %$args );
+
     $terms ||= {};
     $params ||= {};
 
@@ -77,41 +82,85 @@ sub process {
     my $cfg = MT::ConfigMgr->instance;
 
     my @entry_ids = ();
+    my %mailbox_ids_map = (); # チェック済のメールボックス
 
     my $mailboxes_iter = MT->model( 'ketaipost_mailbox' )->load_iter($terms, $params);
     while (my $mailbox = $mailboxes_iter->()) {
+        next if $mailbox_ids_map{ $mailbox->id };
+        $mailbox_ids_map{ $mailbox->id } = 1;
 
-        my $blog = MT->model( 'blog' )->load($mailbox->blog_id);
-        my $category;
-        $category = MT->model( 'category' )->load({id => $mailbox->category_id,
-                        blog_id => $blog->id}) if $mailbox->category_id;
+        # このアカウントの記事の送信先
+        my %targets = ();
+        my $target = {
+            blog => MT->model( 'blog' )->load($mailbox->blog_id),
+            category => $mailbox->category_id ? MT->model( 'category' )->load({id => $mailbox->category_id, blog_id => $mailbox->blog_id}) : undef,
+        };
 
-        my $address = $mailbox->address;
+        unless ( $target->{ 'blog' } ) {
+            log_debug( "(@{[ $mailbox->address ]}) ブログが見つかりません。（blog_id:@{[ $mailbox->blog_id ]}）" );
+            next;
+        }
+        $targets{ $mailbox->address } = $target;
+
+        # POP3アカウントのものは一度に処理
         my $host = $mailbox->host;
         my $account = $mailbox->account;
         my $password = $mailbox->password;
         my $port = $mailbox->port;
-        my $auth_mode = $mailbox->use_apop ? 'APOP' : 'PASS';
-
+        my $use_apop = $mailbox->use_apop;
+        my $use_ssl = $mailbox->use_ssl;
         unless ($host && $port && $account && $password) {
-            log_error("($address) ホスト名、ポート番号、アカウント名、パスワードの入力は必須です。");
+            log_error("(@{[ $mailbox->address ]}) ホスト名、ポート番号、アカウント名、パスワードの入力は必須です。");
             next;
         }
+
+        unless ( $opts{ combine_accounts } ) {
+            log_debug("統合チェック機能が無効です。");
+        } else {
+            my $iter = MT->model( 'ketaipost_mailbox' )->load_iter(
+                {
+                    id => \"!= @{[ $mailbox->id ]}",
+                    host => $host,
+                    account => $account,
+                    password => $password,
+                    port => $port,
+                    use_apop => $use_apop,
+                    use_ssl => $use_ssl },
+                undef
+            );
+            while ( my $other_mailbox = $iter->() ) {
+                $mailbox_ids_map{ $other_mailbox->id } = 1;
+            
+                my $target = {
+                    blog => MT->model( 'blog' )->load($other_mailbox->blog_id),
+                    category => $other_mailbox->category_id ? MT->model( 'category' )->load({id => $other_mailbox->category_id, blog_id => $other_mailbox->blog_id}) : undef,
+                };
+            
+                unless ( $target->{ 'blog' } ) {
+                    log_debug( "(@{[ $other_mailbox->address ]}) ブログが見つかりません。（blog_id:@{[ $other_mailbox->blog_id ]}）" );
+                    last;
+                }
+                $targets{ $other_mailbox->address } = $target;
+            }
+        }
+
+        log_debug( "ACCOUNT:$account チェック対象のメールアドレス:@{[ join( ', ', keys %targets ) ]}" );
         
-        log_debug("$address => AUTH_MODE:$auth_mode USER:$account HOST:$host SSL:".$mailbox->use_ssl);
+        my $auth_mode = $use_apop ? 'APOP' : 'PASS';
+        log_debug("ACCOUNT:$account => AUTH_MODE:$auth_mode USER:$account HOST:$host SSL:".$use_ssl);
         my $pop3 = Mail::POP3Client->new(
             AUTH_MODE => $auth_mode,
             USER => $account,
             PASSWORD => $password,
             HOST => $host,
-            USESSL => $mailbox->use_ssl
+            USESSL => $use_ssl
         );
 
         my $count = $pop3->Count;
-        log_debug("$address count:$count");
+        log_debug("ACCOUNT:$account count:$count");
 
         if ($count < 0) {
-            log_error("$address $host:$port POP3接続に失敗");
+            log_error("ACCOUNT:$account $host:$port POP3接続に失敗");
             next;
         }
         
@@ -131,8 +180,16 @@ sub process {
             
                 my $message = $pop3->HeadAndBody($id);
                 
-                my $ref_data = $self->parse_data($message, { To => $address });
-                next unless $ref_data;
+                my ( $address, $category, $blog, $ref_data );
+                foreach my $key ( keys %targets ) {
+                    $ref_data = $self->parse_data($message, { To => $key });
+                    next unless $ref_data;
+                    $address = $key;
+                    $category = $targets{ $key }->{ category };
+                    $blog = $targets{ $key }->{ blog };
+                    last;
+                }
+                next unless $blog;
                 
                 my $assign = MT->model( 'ketaipost_author' )->load({ address => $ref_data->{from} });
                 $assign ||= MT->model( 'ketaipost_author' )->load({ address => '' });

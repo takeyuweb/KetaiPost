@@ -1024,7 +1024,7 @@ sub build_entry_text {
 
     my $html = $build->build( $ctx, $tokens );
     return ( undef, $build->errstr ) unless ( defined $html );
-    log_debug($tmpl); log_debug($html);
+
     return ( $html, undef );
 }
 

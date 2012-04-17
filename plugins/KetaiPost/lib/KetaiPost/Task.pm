@@ -425,6 +425,7 @@ sub process {
                             $asset->file_path($file_path);
                             $asset->file_name($new_filename);
                             $asset->file_ext($ref_image->{ext});
+                            $asset->mime_type( $ref_image->{type} );
                             $asset->blog_id($blog->id);
                             $asset->created_by($author->id);
                             $asset->modified_by($author->id);
@@ -554,6 +555,7 @@ sub process {
                             $asset->file_path($file_path);
                             $asset->file_name($new_filename);
                             $asset->file_ext($ref_movie->{ext});
+                            $asset->mime_type( $ref_movie->{type} );
                             $asset->blog_id($blog->id);
                             $asset->created_by($author->id);
                             $asset->modified_by($author->id);
@@ -595,6 +597,7 @@ sub process {
                             $thumbnail_asset->file_path($thumbnail_path);
                             $thumbnail_asset->file_name($thumbnail_filename);
                             $thumbnail_asset->file_ext($thumbnail_ext);
+                            $thumbnail_asset->mime_type( 'image/jpeg' );
                             $thumbnail_asset->blog_id($blog->id);
                             $thumbnail_asset->created_by($author->id);
                             $thumbnail_asset->modified_by($author->id);
@@ -619,7 +622,7 @@ sub process {
                     utf8::decode($new_text) unless utf8::is_utf8($new_text);
                     $entry->text($new_text);
                     $entry->save;
-                    $app->run_callbacks('cms_post_save.entry', $app, $entry, $old_entry);
+                    MT->run_callbacks('cms_post_save.entry', $app, $entry, $old_entry);
                 } else {
                     log_error($tmpl_error);
                     next;
@@ -842,7 +845,8 @@ sub _extract_mail_entity {
                         my $ref_image = {
                             data => $data,
                             filename => $fname,
-                            ext => $extname
+                            ext => $extname,
+                            type => $type,
                         };
                         push(@images, $ref_image);
                     }
@@ -866,7 +870,8 @@ sub _extract_mail_entity {
                         my $ref_movie = {
                             data => $data,
                             filename => $fname,
-                            ext => $extname
+                            ext => $extname,
+                            type => $type,
                         };
                         push(@movies, $ref_movie);
                     }
@@ -989,7 +994,7 @@ sub build_entry_text {
     require MT::Template::Context;
 	my $ctx = MT::Template::Context->new;
 
-    $ctx->stash( 'entry', $entry );
+    $ctx->stash( 'entry', MT->model( 'entry' )->load( $entry->id ) );
     $ctx->stash( 'blog',  $blog );
     $ctx->stash( 'category', $category ) if $category;
     $ctx->{current_timestamp} = $entry->created_on;
@@ -1019,7 +1024,7 @@ sub build_entry_text {
 
     my $html = $build->build( $ctx, $tokens );
     return ( undef, $build->errstr ) unless ( defined $html );
-    
+    log_debug($tmpl); log_debug($html);
     return ( $html, undef );
 }
 

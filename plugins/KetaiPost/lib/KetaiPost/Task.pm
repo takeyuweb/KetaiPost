@@ -622,7 +622,6 @@ sub process {
                     utf8::decode($new_text) unless utf8::is_utf8($new_text);
                     $entry->text($new_text);
                     $entry->save;
-                    MT->run_callbacks('cms_post_save.entry', $app, $entry, $old_entry);
                 } else {
                     log_error($tmpl_error);
                     next;
@@ -635,12 +634,11 @@ sub process {
         $pop3->Close();
     }
 
-    # まとめて再構築
-    # 再構築時点でデータをリロードしないとうまく機能しない
     foreach my $entry_id(@entry_ids) {
         my $obj = MT->model( 'entry' )->load( $entry_id );
         $self->rebuild_entry_page( $obj );
         $self->send_entry_notify( $obj );
+        $self->run_callbacks( $obj );
     }
 
     1;
@@ -951,7 +949,7 @@ sub create_entry {
         });
         log_debug($entry->permalink);
 
-        $app->run_callbacks('cms_post_save.entry', $app, $entry);
+        #$app->run_callbacks('cms_post_save.entry', $app, $entry);
         
         return $entry;
     } else {
@@ -1157,6 +1155,13 @@ sub send_entry_notify {
         }
     }
     return 1;
+}
+
+sub run_callbacks {
+    my $self = shift;
+    my ( $entry ) = @_;
+    my $app = MT->instance;
+    MT->run_callbacks('cms_post_save.entry', $app, $entry);
 }
 
 1;

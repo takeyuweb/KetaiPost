@@ -673,7 +673,7 @@ sub build_attributes {
     # 宛先取り出し
     my @recipients;
     my $recipient = $head->get('to');
-    chomp($recipient);
+    chomp($recipient) if $recipient;
     my @addrs = Mail::Address->parse($recipient);
     foreach my $addr (@addrs) {
         my $buf = $addr->address;

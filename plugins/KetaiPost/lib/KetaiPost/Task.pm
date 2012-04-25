@@ -20,7 +20,6 @@ use Image::Size qw( imgsize );
 use MT::Image;
 
 use MT::ConfigMgr;
-use MT::App::CMS;
 use MT::WeblogPublisher;
 
 use KetaiPost::Util qw(log_debug log_info log_error log_security get_blog_setting get_website_setting get_system_setting get_setting
@@ -78,7 +77,7 @@ sub process {
     $terms ||= {};
     $params ||= {};
 
-    my $app = MT::App::CMS->new;
+    my $app = MT->instance;
     my $cfg = MT::ConfigMgr->instance;
 
     my @entry_ids = ();
@@ -909,7 +908,7 @@ sub create_entry {
     my $self = shift;
     my ($blog, $author, $subject, $text, $category) = @_;
 
-    my $app = MT::App::CMS->new;
+    my $app = MT->instance;
     my $publisher = MT::WeblogPublisher->new;
     my $entry  = MT->model( 'entry' )->new;
     
@@ -949,8 +948,6 @@ sub create_entry {
         });
         log_debug($entry->permalink);
 
-        #$app->run_callbacks('cms_post_save.entry', $app, $entry);
-        
         return $entry;
     } else {
         log_debug("投稿失敗");

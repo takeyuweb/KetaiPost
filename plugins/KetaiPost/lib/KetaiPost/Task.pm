@@ -295,9 +295,6 @@ sub process {
                 } else {
                     if ( @$ref_images) {
                 
-                        $entry->created_on =~ /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/;
-                        my ($year, $month, $day, $hour, $min, $sec) = ($1, $2, $3, $4, $5, $6);
-                    
                         # 添付写真の保存
                         # ファイルマネージャのインスタンス生成
                         my $fmgr = MT::FileMgr->new('Local');
@@ -457,9 +454,6 @@ sub process {
                         log_debug("FFmpeg: $ffmpeg_path");
                     
 
-                        $entry->created_on =~ /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/;
-                        my ($year, $month, $day, $hour, $min, $sec) = ($1, $2, $3, $4, $5, $6);
-                    
                         # 添付写真の保存
                         # ファイルマネージャのインスタンス生成
                         my $fmgr = MT::FileMgr->new('Local');
@@ -1158,7 +1152,8 @@ sub run_callbacks {
     my $self = shift;
     my ( $entry ) = @_;
     my $app = MT->instance;
-    MT->run_callbacks('cms_post_save.entry', $app, $entry);
+    #MT->run_callbacks('cms_post_save.entry', $app, $entry);
+    MT->run_callbacks( 'scheduled_post_published', $app, $entry );
 }
 
 1;

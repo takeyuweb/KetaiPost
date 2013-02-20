@@ -774,6 +774,7 @@ sub _extract_mail_entity {
     
     my %imagetypes = ('image/pjpeg' => 'jpg',
                       'image/jpeg' => 'jpg',
+                      'image/jpg' => 'jpg',
                       'image/gif' => 'gif',
                       'image/png' => 'png');
     my %movietypes = ('video/3gpp2' => '3gp',

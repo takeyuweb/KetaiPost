@@ -58,8 +58,10 @@ sub update_null_columns {
 }
 
 sub hdlr_task {
-    require KetaiPost::Task;
-    KetaiPost::Task->new()->run();
+    unless ( MT->config->KetaiPostSkipPeriodicTasks ) {
+        require KetaiPost::Task;
+        KetaiPost::Task->new()->run();
+    }
     1;
 }
 

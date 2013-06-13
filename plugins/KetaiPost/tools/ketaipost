@@ -1,0 +1,37 @@
+#!/usr/bin/perl
+package MT::Tool::KetaiPost;
+use strict;
+use warnings;
+
+package MT;
+
+sub mode {
+    'ketaipost';
+}
+
+package main;
+
+use File::Spec;
+use FindBin;
+use lib map File::Spec->catdir($FindBin::Bin, File::Spec->updir, $_), qw/lib extlib/;
+use base qw( MT::Tool );
+
+sub main {
+    my $class = shift;
+    my ( $verbose ) = $class->SUPER::main( @_ );
+
+    eval{
+        require KetaiPost::Task;
+        KetaiPost::Task->new()->run();
+    };
+    if ( my $errstr = $@ ) {
+        require MT::Log;
+        MT->log({
+            message => $errstr,
+            level   => MT::Log::ERROR(),
+        });
+    }
+    1;
+}
+
+__PACKAGE__->main() unless caller;

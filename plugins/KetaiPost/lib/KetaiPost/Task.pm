@@ -209,6 +209,7 @@ sub process {
                 foreach my $ref_movie(@$ref_movies) {
                     log_debug("filename: ".$ref_movie->{filename});
                 }
+                MT->run_callbacks( 'ketai_post_received', $app, $ref_data );
                 
                 # 権限のチェック
                 unless ( if_can_on_blog( $author, $blog, 'create_post' ) ) {
@@ -282,6 +283,8 @@ sub process {
 
                 my $entry = $self->create_entry($blog, $author, $subject, $text, $category);
                 next unless $entry;
+                
+                MT->run_callbacks( 'ketai_post_created', $app, $ref_data, $entry );
                 
                 push(@entry_ids, $entry->id);
                 $pop3->Delete($id) unless (get_system_setting('disable_delete_flag'));
@@ -619,7 +622,7 @@ sub process {
                     log_error($tmpl_error);
                     next;
                 }
-                
+                MT->run_callbacks( 'ketai_post_published', $app, $ref_data, $entry );
             } # end loop
         }; # eval
         log_error($@) if $@;

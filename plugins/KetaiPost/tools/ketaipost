@@ -16,6 +16,8 @@ use FindBin;
 use lib map File::Spec->catdir($FindBin::Bin, File::Spec->updir, $_), qw/lib extlib/;
 use base qw( MT::Tool );
 
+$SIG{PIPE} = 'IGNORE';
+
 sub main {
     my $class = shift;
     my ( $verbose ) = $class->SUPER::main( @_ );

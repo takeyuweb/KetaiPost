@@ -145,489 +145,509 @@ sub process {
 
         log_debug( "ACCOUNT:$account チェック対象のメールアドレス:@{[ join( ', ', keys %targets ) ]}" );
         
-        my $auth_mode = $use_apop ? 'APOP' : 'PASS';
-        log_debug("ACCOUNT:$account => AUTH_MODE:$auth_mode USER:$account HOST:$host SSL:".$use_ssl);
-        my $pop3 = Mail::POP3Client->new(
-            AUTH_MODE => $auth_mode,
-            USER => $account,
-            PASSWORD => $password,
-            HOST => $host,
-            USESSL => $use_ssl
-        );
-
-        my $count = $pop3->Count;
-        log_debug("ACCOUNT:$account count:$count");
-
-        if ($count < 0) {
-            log_error("ACCOUNT:$account $host:$port POP3接続に失敗");
-            next;
-        }
-        
-        
+        my $count;  # サーバ内の全件数
         my $start = 1;
-        if ( my $pop_download_mails = get_system_setting( 'pop_download_mails' ) ) {
+        my $pop_download_mails = get_system_setting( 'pop_download_mails' ) || 100;
+        unless ( $pop_download_mails ) {
+            $pop_download_mails = 100;
+        }
+        {
+            my $auth_mode = $use_apop ? 'APOP' : 'PASS';
+            my $pop3 = Mail::POP3Client->new(
+                AUTH_MODE => $auth_mode,
+                USER => $account,
+                PASSWORD => $password,
+                HOST => $host,
+                USESSL => $use_ssl
+            );
+            $count = $pop3->Count;
+            $pop3->Close();
+            log_debug("ACCOUNT:$account count:$count");
+
+            if ($count < 0) {
+                log_error("ACCOUNT:$account $host:$port POP3接続に失敗");
+                next;
+            }
+            
             $start = $count - $pop_download_mails + 1;
             $start = 1 if $start < 1;
         }
-        if ( $count > 0 ) {
-            log_debug( "$start - $count 番目のメールを受信します。" );
-        }
-          
-        eval {
-            
-            for (my $id=$start; $id<=$count; $id++) {
-            
-                my $message = $pop3->HeadAndBody($id);
+        
+        my $id = $start;
+        my $closure = sub {
+            my $counter = 0;
+            while ( $counter < $pop_download_mails && $count >= $start + $counter ) {
+                my $auth_mode = $use_apop ? 'APOP' : 'PASS';
+                log_debug("ACCOUNT:$account => AUTH_MODE:$auth_mode USER:$account HOST:$host SSL:".$use_ssl);
+                my $pop3 = Mail::POP3Client->new(
+                    AUTH_MODE => $auth_mode,
+                    USER => $account,
+                    PASSWORD => $password,
+                    HOST => $host,
+                    USESSL => $use_ssl
+                );
                 
-                my ( $address, $category, $blog, $ref_data );
-                foreach my $key ( keys %targets ) {
-                    $ref_data = $self->parse_data($message, { To => $key });
-                    next unless $ref_data;
-                    $address = $key;
-                    $category = $targets{ $key }->{ category };
-                    $blog = $targets{ $key }->{ blog };
-                    last;
-                }
-                next unless $blog;
+                log_debug( "サーバ内全 $count 件中 最新から @{[ $start + $counter ]} 番目のメールを受信します。" );
                 
-                my $assign = MT->model( 'ketaipost_author' )->load({ address => $ref_data->{from} });
-                $assign ||= MT->model( 'ketaipost_author' )->load({ address => '' });
-                unless ($assign) {
-                    log_error("unknown author (".$ref_data->{from}.")", { blog_id => $blog->id });
-                    $pop3->Delete($id) unless (get_system_setting('disable_delete_flag'));
-                    next;
-                }
-                my $author = MT->model( 'author' )->load({ id => $assign->author_id });
+                my ( $address, $category, $blog, $author, $ref_data );
+                my $process = sub {
+                    my $message = $pop3->HeadAndBody( $id );
+                    foreach my $key ( keys %targets ) {
+                        $ref_data = $self->parse_data($message, { To => $key });
+                        next unless $ref_data;
+                        $address = $key;
+                        $category = $targets{ $key }->{ category };
+                        $blog = $targets{ $key }->{ blog };
+                        last;
+                    }
+                    unless( $blog ) {
+                        log_debug("Unknown recipients. skipped.");
+                        $id++;
+                        return 0;
+                    }
+                    
+                    my $assign = MT->model( 'ketaipost_author' )->load({ address => $ref_data->{from} });
+                    $assign ||= MT->model( 'ketaipost_author' )->load({ address => '' });
+                    unless ($assign) {
+                        log_error("unknown author (".$ref_data->{from}.")", { blog_id => $blog->id });
+                        $pop3->Delete($id);
+                        return 0;
+                    }
+                    $author = MT->model( 'author' )->load({ id => $assign->author_id });
+                    
+                    log_debug("author: ".$author->name);
+                    log_debug("subject: ".$ref_data->{subject}."\nbody:\n".$ref_data->{text});
+                    foreach my $ref_image(@{ $ref_data->{images} }) {
+                        log_debug("filename: ".$ref_image->{filename});
+                    }
+                    foreach my $ref_movie(@{ $ref_data->{movies} }) {
+                        log_debug("filename: ".$ref_movie->{filename});
+                    }
+                    MT->run_callbacks( 'ketai_post_received', $app, $ref_data );
+                    
+                    # 権限のチェック
+                    unless ( if_can_on_blog( $author, $blog, 'create_post' ) ) {
+                        log_error("記事の追加を試みましたが権限がありません。", {
+                            blog_id => $blog->id,
+                            author_id => $author->id});
+                        $pop3->Delete($id);
+                        return 0;
+                    }
+                    
+                    $pop3->Delete($id);
+                    return 1;
+                };
+                my $result = $process->();
+                $pop3->Close();
                 
-                log_debug("author: ".$author->name);
-                log_debug("subject: ".$ref_data->{subject}."\nbody:\n".$ref_data->{text});
-                my $ref_images = $ref_data->{images};
-                foreach my $ref_image(@$ref_images) {
-                    log_debug("filename: ".$ref_image->{filename});
-                }
-                my $ref_movies = $ref_data->{movies};
-                foreach my $ref_movie(@$ref_movies) {
-                    log_debug("filename: ".$ref_movie->{filename});
-                }
-                MT->run_callbacks( 'ketai_post_received', $app, $ref_data );
-                
-                # 権限のチェック
-                unless ( if_can_on_blog( $author, $blog, 'create_post' ) ) {
-                    log_error("記事の追加を試みましたが権限がありません。", {
-                        blog_id => $blog->id,
-                        author_id => $author->id});
-                    $pop3->Delete($id) unless (get_system_setting('disable_delete_flag'));
-                    next;
-                }
-                
-                # 記事登録
-                my ($subject, $text) = ($ref_data->{subject}, $ref_data->{text});
-                $subject = get_setting($blog->id, 'default_subject') || '無題' unless ($subject);
-                if ( use_escape($blog->id) ) {
-                    $subject = MT::Util::encode_html($subject);
-                    $text = MT::Util::encode_html($text);
-                    $text =~ s/\r\n/\n/g;
-                    $text =~ s/\n/<br \/>/g;
-                } else {
-                    # HTMLエスケープしない場合改行の扱いがネック br と 改行コード
-                    # brタグが含まれるなら改行コードの変換を行わない
-                    # そうでないなら改行コードをbrタグに変換 で暫定対処
-                    if ( $text =~ m|<br\s*/?>| ) {
-                        # 含まれるなら改行変換をしない
-                    } else {
+                if ( $result ) {
+                    # 記事登録
+                    my ($subject, $text) = ($ref_data->{subject}, $ref_data->{text});
+                    $subject = get_setting($blog->id, 'default_subject') || '無題' unless ($subject);
+                    if ( use_escape($blog->id) ) {
+                        $subject = MT::Util::encode_html($subject);
+                        $text = MT::Util::encode_html($text);
                         $text =~ s/\r\n/\n/g;
                         $text =~ s/\n/<br \/>/g;
-                    }
-                }
-
-                if ( use_xatena( $blog->id ) ) {
-                    log_debug( "はてな記法が有効です。" );
-                    
-                    $text =~ s/<br \/>\n?/\n/g;
-
-                    require Text::Xatena;
-                    my $syntaxes = [
-                        'Text::Xatena::Node::SeeMore',
-                        'Text::Xatena::Node::SuperPre',
-                        'Text::Xatena::Node::StopP',
-                        'Text::Xatena::Node::Blockquote',
-                        'Text::Xatena::Node::Pre',
-                        'Text::Xatena::Node::List',
-                        'Text::Xatena::Node::DefinitionList',
-                        'Text::Xatena::Node::Table',
-                        'Text::Xatena::Node::Section',
-                        'Text::Xatena::Node::Comment',
-                        'Text::Xatena::Node::KetaiPost'
-                    ];
-                    my $thx = Text::Xatena->new( syntaxes => $syntaxes );
-                    
-                    #my $inline = Text::Xatena::Inline->new;
-                    require Text::Xatena::Inline::KetaiPost;
-                    my $inline = Text::Xatena::Inline::KetaiPost->new;
-                    my $formatted = $thx->format( decode( 'utf8', $text ) , inline => $inline );
-                    my $out = '';
-                    $out .= '<div class="body">';
-                    $out .= $formatted;
-                    $out .= '</div>';
-                    $out .= '<div class="notes">';
-                    for my $footnote (@{ $inline->footnotes }) {
-                        $out .= sprintf('<div class="footnote" id="#fn%d">*%d: %s</div>',
-                                        $footnote->{number},
-                                        $footnote->{number},
-                                        $footnote->{note},
-                                    );
-                    }
-                    $out .= '</div>';
-                    $text = encode( 'utf8', $out );
-                }
-
-                my $entry = $self->create_entry($blog, $author, $subject, $text, $category);
-                next unless $entry;
-                
-                MT->run_callbacks( 'ketai_post_created', $app, $ref_data, $entry );
-                
-                push(@entry_ids, $entry->id);
-                $pop3->Delete($id) unless (get_system_setting('disable_delete_flag'));
-                
-                # 処理ここから
-                # ファイルアップロード権限ある場合のみ処理する
-                unless ( if_can_on_blog( $author, $blog, 'upload' ) ) {
-                    log_debug( "ファイルアップロード権限がありません。", {
-                        blog_id => $blog->id,
-                        author_id => $author->id } );
-                } else {
-                    if ( @$ref_images) {
-                
-                        # 添付写真の保存
-                        # ファイルマネージャのインスタンス生成
-                        my $fmgr = MT::FileMgr->new('Local');
-                        unless ($fmgr) {
-                            log_error(MT::FileMgr->errstr);
-                            next;
+                    } else {
+                        # HTMLエスケープしない場合改行の扱いがネック br と 改行コード
+                        # brタグが含まれるなら改行コードの変換を行わない
+                        # そうでないなら改行コードをbrタグに変換 で暫定対処
+                        if ( $text =~ m|<br\s*/?>| ) {
+                            # 含まれるなら改行変換をしない
+                        } else {
+                            $text =~ s/\r\n/\n/g;
+                            $text =~ s/\n/<br \/>/g;
                         }
-                    
-                        my $now = time;
-                        my @t = MT::Util::offset_time_list($now, $blog);
-                        for (my $i=0; $i<@$ref_images; $i++) {
-                            my $ref_image = $ref_images->[$i];
-                            # 新しいファイル名
-                            my $new_filename = sprintf("%d_%d_%d.%s", $entry->id, $now, $i, $ref_image->{ext});
-                            # ブログルート
-                            my $root_path = $blog->site_path; # サーバ内パス
-                            my $root_url = $blog->site_url;   # URL
-                            # 保存先
-                            my $relative_dir = "ketai_post_files/".($t[5]+1900).'/'.($t[4]+1)."/".($t[3])."/";
-                            my $relative_file_path = $relative_dir.$new_filename; # 相対パス
-                            my $file_path = File::Spec->catfile($root_path, $relative_file_path); # サーバ内パス
-                            my $dir = dirname($file_path); # ディレクトリ名
-                            my $url = $root_url;
-                            $url .= '/' if $url !~ m!/$!;
-                            $url .= $relative_file_path; # URL
+                    }
+                    if ( use_xatena( $blog->id ) ) {
+                        log_debug( "はてな記法が有効です。" );
                         
-                            log_debug("file_path: $file_path\nurl: $url");
+                        $text =~ s/<br \/>\n?/\n/g;
+
+                        require Text::Xatena;
+                        my $syntaxes = [
+                            'Text::Xatena::Node::SeeMore',
+                            'Text::Xatena::Node::SuperPre',
+                            'Text::Xatena::Node::StopP',
+                            'Text::Xatena::Node::Blockquote',
+                            'Text::Xatena::Node::Pre',
+                            'Text::Xatena::Node::List',
+                            'Text::Xatena::Node::DefinitionList',
+                            'Text::Xatena::Node::Table',
+                            'Text::Xatena::Node::Section',
+                            'Text::Xatena::Node::Comment',
+                            'Text::Xatena::Node::KetaiPost'
+                        ];
+                        my $thx = Text::Xatena->new( syntaxes => $syntaxes );
                         
-                            my @latlng = ();
+                        #my $inline = Text::Xatena::Inline->new;
+                        require Text::Xatena::Inline::KetaiPost;
+                        my $inline = Text::Xatena::Inline::KetaiPost->new;
+                        my $formatted = $thx->format( decode( 'utf8', $text ) , inline => $inline );
+                        my $out = '';
+                        $out .= '<div class="body">';
+                        $out .= $formatted;
+                        $out .= '</div>';
+                        $out .= '<div class="notes">';
+                        for my $footnote (@{ $inline->footnotes }) {
+                            $out .= sprintf('<div class="footnote" id="#fn%d">*%d: %s</div>',
+                                            $footnote->{number},
+                                            $footnote->{number},
+                                            $footnote->{note},
+                                        );
+                        }
+                        $out .= '</div>';
+                        $text = encode( 'utf8', $out );
+                    }
+
+                    my $entry = $self->create_entry($blog, $author, $subject, $text, $category);
+                    if ( $entry ) {
+                        MT->run_callbacks( 'ketai_post_created', $app, $ref_data, $entry );
+                        push(@entry_ids, $entry->id);
                         
-                            # ExifTool が必要な処理
-                            if (use_exiftool) {
-                                require Image::ExifTool;
+                        
+                        # 処理ここから
+                        # ファイルアップロード権限ある場合のみ処理する
+                        unless ( if_can_on_blog( $author, $blog, 'upload' ) ) {
+                            log_debug( "ファイルアップロード権限がありません。", {
+                                blog_id => $blog->id,
+                                author_id => $author->id } );
+                        } else {
+                            my $ref_images = $ref_data->{ images };
+                            if ( @$ref_images) {
+                        
+                                # 添付写真の保存
+                                # ファイルマネージャのインスタンス生成
+                                my $fmgr = MT::FileMgr->new('Local');
+                                unless ($fmgr) {
+                                    log_error(MT::FileMgr->errstr);
+                                    die MT::FileMgr->errstr;
+                                }
                             
-                                my $exifTool = new Image::ExifTool;
-                                my $ref_image_data = \($ref_image->{data});
-                                my $exifInfo = $exifTool->ImageInfo($ref_image_data,
-                                                                    'Orientation',
-                                                                    'GPSLatitude',
-                                                                    'GPSLongitude');
-                            
-                                # 必要に応じて向きを補正
-                                if (1) {
-                                    log_debug("向きの補正が有効になっています。");
+                                my $now = time;
+                                my @t = MT::Util::offset_time_list($now, $blog);
+                                for (my $i=0; $i<@$ref_images; $i++) {
+                                    my $ref_image = $ref_images->[$i];
+                                    # 新しいファイル名
+                                    my $new_filename = sprintf("%d_%d_%d.%s", $entry->id, $now, $i, $ref_image->{ext});
+                                    # ブログルート
+                                    my $root_path = $blog->site_path; # サーバ内パス
+                                    my $root_url = $blog->site_url;   # URL
+                                    # 保存先
+                                    my $relative_dir = "ketai_post_files/".($t[5]+1900).'/'.($t[4]+1)."/".($t[3])."/";
+                                    my $relative_file_path = $relative_dir.$new_filename; # 相対パス
+                                    my $file_path = File::Spec->catfile($root_path, $relative_file_path); # サーバ内パス
+                                    my $dir = dirname($file_path); # ディレクトリ名
+                                    my $url = $root_url;
+                                    $url .= '/' if $url !~ m!/$!;
+                                    $url .= $relative_file_path; # URL
                                 
-                                    my $rotation = $exifInfo->{Orientation};
-                                    if ($rotation) {
-                                        # Horizontal (normal)
-                                        # Mirror horizontal
-                                        # Rotate 180
-                                        # Mirror vertical
-                                        # Mirror horizontal and rotate 270 CW
-                                        # Rotate 90 CW
-                                        # Mirror horizontal and rotate 90 CW
-                                        # Rotate 270 CW
-                                        my $degrees = 0;
-                                        if ($rotation eq 'Rotate 90 CW') {
-                                            $degrees = 90;
-                                        } elsif ($rotation eq 'Rotate 180') {
-                                            $degrees = 180;
-                                        } elsif ($rotation eq 'Rotate 270 CW') {
-                                            $degrees = 270;
+                                    log_debug("file_path: $file_path\nurl: $url");
+                                
+                                    my @latlng = ();
+                                
+                                    # ExifTool が必要な処理
+                                    if (use_exiftool) {
+                                        require Image::ExifTool;
+                                    
+                                        my $exifTool = new Image::ExifTool;
+                                        my $ref_image_data = \($ref_image->{data});
+                                        my $exifInfo = $exifTool->ImageInfo($ref_image_data,
+                                                                            'Orientation',
+                                                                            'GPSLatitude',
+                                                                            'GPSLongitude');
+                                    
+                                        # 必要に応じて向きを補正
+                                        if (1) {
+                                            log_debug("向きの補正が有効になっています。");
+                                        
+                                            my $rotation = $exifInfo->{Orientation};
+                                            if ($rotation) {
+                                                # Horizontal (normal)
+                                                # Mirror horizontal
+                                                # Rotate 180
+                                                # Mirror vertical
+                                                # Mirror horizontal and rotate 270 CW
+                                                # Rotate 90 CW
+                                                # Mirror horizontal and rotate 90 CW
+                                                # Rotate 270 CW
+                                                my $degrees = 0;
+                                                if ($rotation eq 'Rotate 90 CW') {
+                                                    $degrees = 90;
+                                                } elsif ($rotation eq 'Rotate 180') {
+                                                    $degrees = 180;
+                                                } elsif ($rotation eq 'Rotate 270 CW') {
+                                                    $degrees = 270;
+                                                }
+                                                log_debug("Orientation: $rotation");
+                                                if ($degrees && use_magick) {
+                                                    require Image::Magick;
+                                                    my $img = Image::Magick->new;
+                                                    $img->BlobToImage($ref_image->{data});
+                                                    $img->Rotate(degrees => $degrees);
+                                                    $ref_image->{data} = $img->ImageToBlob();
+                                                }
+                                            }
                                         }
-                                        log_debug("Orientation: $rotation");
-                                        if ($degrees && use_magick) {
-                                            require Image::Magick;
-                                            my $img = Image::Magick->new;
-                                            $img->BlobToImage($ref_image->{data});
-                                            $img->Rotate(degrees => $degrees);
-                                            $ref_image->{data} = $img->ImageToBlob();
+                                    
+                                        # 位置情報を取得
+                                        if (use_gmap($blog->id)) {
+                                            my @tmp = ($exifInfo->{GPSLatitude}, $exifInfo->{GPSLongitude});
+                                            foreach my $geostr (@tmp) {
+                                                if ($geostr && $geostr =~ /(\S+) deg (\S+)\' (.*)\"/) {
+                                                    my $p1 = $1;
+                                                    my $p2 = $2/60;
+                                                    my $p3 = $3/3600;
+                                                    push(@latlng, $p1 + $p2 + $p3);
+                                                }
+                                            }
+                                            log_debug("GPSLatitude: ".($tmp[0] || '')." GPSLongitude:".($tmp[1] || '')." => lat: ".($latlng[0] || '')." lng: ".($latlng[1] || ''));
                                         }
                                     }
+                                
+                                    # アップロード先ディレクトリ生成
+                                    unless($fmgr->exists($dir)) {
+                                        unless ($fmgr->mkpath($dir)) {
+                                            log_error($fmgr->errstr);
+                                            die $fmgr->errstr;
+                                        }
+                                    }
+                                    # 保存
+                                    my $bytes = $fmgr->put_data($ref_image->{data}, $file_path, 'upload');
+                                    unless (defined $bytes) {
+                                        log_error($fmgr->errstr);
+                                        die $fmgr->errstr;
+                                    }            
+                                    log_debug($ref_image->{filename}." を ".$file_path." に書き込みました。");
+                                
+                                    unless ( get_setting($blog->id, 'remove_exif') == 1 ) {
+                                        log_debug('Exif除去有効');
+                                        if ( use_magick && -f $file_path ) {
+                                            require Image::Magick;
+                                            my $thumb = Image::Magick->new();
+                                            $thumb->Read( $file_path );
+                                            if ( $thumb->[0] ) {
+                                                $thumb->Profile( name=>"*", profile=>"" );
+                                                $thumb->[0]->Write( filename => $file_path );
+                                            }
+                                        }
+                                    }
+                                
+                                    # アイテムの登録
+                                    my ( $width, $height ) = imgsize( $file_path );
+                                    my $asset = MT->model( 'image' )->new;
+                                    # 情報セット
+                                    $asset->label($entry->title);
+                                    $asset->file_path($file_path);
+                                    $asset->file_name($new_filename);
+                                    $asset->file_ext($ref_image->{ext});
+                                    $asset->mime_type( $ref_image->{type} );
+                                    $asset->blog_id($blog->id);
+                                    $asset->created_by($author->id);
+                                    $asset->modified_by($author->id);
+                                    $asset->url($url);
+                                    $asset->description('');
+                                    $asset->image_width($width);
+                                    $asset->image_height($height);
+                                    # アイテムの登録
+                                    unless ($asset->save) {
+                                        log_error("アイテムの登録に失敗:" . $asset->errstr);
+                                        die $asset->errstr;
+                                    }
+
+                                    # エントリと関連づけ
+                                    my $obj_asset = MT->model( 'objectasset' )->new();
+                                    $obj_asset->blog_id($blog->id);
+                                    $obj_asset->asset_id($asset->id);
+                                    $obj_asset->object_ds('entry');
+                                    $obj_asset->object_id($entry->id);
+                                    $obj_asset->save;
+                                
+                                    log_debug("アイテムを登録しました id:".$asset->id."path:$file_path url:$url");
+                                }
+                            }           # 写真ここまで
+
+                            # 動画
+                            my $ref_movies = $ref_data->{ movies };
+                            if (@$ref_movies && use_ffmpeg($blog->id)) {
+                                my $ffmpeg_path = get_system_setting('ffmpeg_path');
+                                log_debug("ムービー掲載が有効です。");
+                                log_debug("FFmpeg: $ffmpeg_path");
+                            
+
+                                # 添付写真の保存
+                                # ファイルマネージャのインスタンス生成
+                                my $fmgr = MT::FileMgr->new('Local');
+                                unless ($fmgr) {
+                                    log_error(MT::FileMgr->errstr);
+                                    die MT::FileMgr->errstr;
                                 }
                             
-                                # 位置情報を取得
-                                if (use_gmap($blog->id)) {
-                                    my @tmp = ($exifInfo->{GPSLatitude}, $exifInfo->{GPSLongitude});
-                                    foreach my $geostr (@tmp) {
-                                        if ($geostr && $geostr =~ /(\S+) deg (\S+)\' (.*)\"/) {
-                                            my $p1 = $1;
-                                            my $p2 = $2/60;
-                                            my $p3 = $3/3600;
-                                            push(@latlng, $p1 + $p2 + $p3);
+                                my $now = time;
+                                my @t = MT::Util::offset_time_list($now, $blog);
+                                for (my $i=0; $i<@$ref_movies; $i++) {
+                                    my $ref_movie = $ref_movies->[$i];
+                                    # 新しいファイル名
+                                    my $new_filename = sprintf("%d_%d_%d.flv", $entry->id, $now, $i);
+                                    # ブログルート
+                                    my $root_path = $blog->site_path; # サーバ内パス
+                                    my $root_url = $blog->site_url;   # URL
+                                    # 保存先
+                                    my $relative_dir = "ketai_post_files/".($t[5]+1900).'/'.($t[4]+1)."/".($t[3])."/";
+                                    my $relative_file_path = $relative_dir.$new_filename; # 相対パス
+                                    my $file_path = File::Spec->catfile($root_path, $relative_file_path); # サーバ内パス
+                                    my $dir = dirname($file_path); # ディレクトリ名
+                                    my $url = $root_url;
+                                    $url .= '/' if $url !~ m!/$!;
+                                    $url .= $relative_file_path; # URL
+
+                                    my $thumbnail_filename = sprintf("%d_%d_%d.jpg", $entry->id, $now, $i);
+                                    my $relative_thumbnail_path = $relative_dir.$thumbnail_filename; # 相対パス
+                                    my $thumbnail_path = File::Spec->catfile($root_path, $relative_thumbnail_path);
+                                
+                                    log_debug("file_path: $file_path\nurl: $url");
+                                
+                                    # アップロード先ディレクトリ生成
+                                    unless($fmgr->exists($dir)) {
+                                        unless ($fmgr->mkpath($dir)) {
+                                            log_error($fmgr->errstr);
+                                            die $fmgr->errstr;
                                         }
                                     }
-                                    log_debug("GPSLatitude: ".($tmp[0] || '')." GPSLongitude:".($tmp[1] || '')." => lat: ".($latlng[0] || '')." lng: ".($latlng[1] || ''));
-                                }
-                            }
-                        
-                            # アップロード先ディレクトリ生成
-                            unless($fmgr->exists($dir)) {
-                                unless ($fmgr->mkpath($dir)) {
-                                    log_error($fmgr->errstr);
-                                    next;
-                                }
-                            }
-                            # 保存
-                            my $bytes = $fmgr->put_data($ref_image->{data}, $file_path, 'upload');
-                        
-                            unless (defined $bytes) {
-                                log_error($fmgr->errstr);
-                                next;
-                            }            
-                            log_debug($ref_image->{filename}." を ".$file_path." に書き込みました。");
-                        
-                            unless ( get_setting($blog->id, 'remove_exif') == 1 ) {
-                                log_debug('Exif除去有効');
-                                if ( use_magick && -f $file_path ) {
-                                    require Image::Magick;
-                                    my $thumb = Image::Magick->new();
-                                    $thumb->Read( $file_path );
-                                    if ( $thumb->[0] ) {
-                                        $thumb->Profile( name=>"*", profile=>"" );
-                                        $thumb->[0]->Write( filename => $file_path );
+
+                                    # 変換
+                                    my $temp_dir = get_system_setting('temp_dir');
+
+                                    my($tmp_fh, $tmp_filename) = File::Temp::tempfile(
+                                        'movie_XXXXXX',
+                                        SUFFIX => ".@{[ $ref_movie->{ext} ]}",
+                                        UNLINK => 1,
+                                        DIR => $temp_dir
+                                    );
+                                    print $tmp_fh $ref_movie->{data};
+                                    close($tmp_fh);
+                                    my($tmpout_fh, $tmpout_filename) = File::Temp::tempfile(
+                                        'movie_XXXXXX',
+                                        SUFFIX => '.flv',
+                                        UNLINK => 1,
+                                        DIR => $temp_dir
+                                    );
+                                    close($tmpout_fh);
+                                    my($tmppasslog_fh, $tmppasslog_filename) = File::Temp::tempfile(
+                                        'passlog_XXXXXX',
+                                        SUFFIX => '.txt',
+                                        UNLINK => 1,
+                                        DIR => $temp_dir
+                                    );
+                                    close($tmppasslog_fh);
+
+                                    system("$ffmpeg_path -y -i $tmp_filename -an -pass 1 -passlogfile $tmppasslog_filename -vcodec flv -f flv -b 5M $tmpout_filename");
+                                    system("$ffmpeg_path -y -i $tmp_filename -ar 44100 -acodec libmp3lame -pass 2 -passlogfile $tmppasslog_filename -vcodec flv -f flv -b 5M $tmpout_filename");
+
+                                    my($tmpthumb_fh, $tmpthumb_filename) = File::Temp::tempfile(
+                                        TEMPLATE => 'image_XXXXXX',
+                                        SUFFIX => '.jpg',
+                                        UNLINK => 1,
+                                        DIR => $temp_dir
+                                    );
+                                    close($tmpthumb_fh);
+
+                                    system("$ffmpeg_path -y -i $tmp_filename -f image2 -ss 1 -r 1 -an -deinterlace $tmpthumb_filename");
+                                
+                                    # 保存
+                                    my $bytes = $fmgr->put($tmpout_filename, $file_path, 'upload');
+                                    unless (defined $bytes) {
+                                        log_error($fmgr->errstr);
+                                        next;
+                                    }            
+                                    log_debug($ref_movie->{filename}." を ".$file_path." に書き込みました。");
+                                
+                                    # アイテムの登録
+                                    my $asset = MT->model( 'video' )->new;
+                                    # 情報セット
+                                    $asset->label($entry->title);
+                                    $asset->file_path($file_path);
+                                    $asset->file_name($new_filename);
+                                    $asset->file_ext($ref_movie->{ext});
+                                    $asset->mime_type( $ref_movie->{type} );
+                                    $asset->blog_id($blog->id);
+                                    $asset->created_by($author->id);
+                                    $asset->modified_by($author->id);
+                                    $asset->url($url);
+                                    $asset->description('');
+
+                                    # アイテムの登録
+                                    unless ($asset->save) {
+                                        log_error("アイテムの登録に失敗:" . $asset->errstr);
+                                        die $asset->errstr;
                                     }
+
+                                    # エントリと関連づけ
+                                    my $obj_asset = MT->model( 'objectasset' )->new();
+                                    $obj_asset->blog_id($blog->id);
+                                    $obj_asset->asset_id($asset->id);
+                                    $obj_asset->object_ds('entry');
+                                    $obj_asset->object_id($entry->id);
+                                    $obj_asset->save;
+                                
+                                    log_debug("アイテムを登録しました id:".$asset->id."path:$file_path url:$url");
+                                
+                                    $bytes = $fmgr->put($tmpthumb_filename, $thumbnail_path, 'upload');
+                                    unless (defined $bytes) {
+                                        log_error($fmgr->errstr);
+                                        die $fmgr->errstr;
+                                    }            
+                                    log_debug($ref_movie->{filename}." を ".$file_path." に書き込みました。");
+                                
+
+                                    my ($thumbnail_basename, $thumbnail_dir, $thumbnail_ext) = fileparse($thumbnail_path, qr/\.[^.]*/);
+                                    my $thumbnail_url = $root_url.File::Spec->abs2rel($thumbnail_path, $root_path);
+                                    log_debug("サムネイルを作成しました。 path:$thumbnail_path url:$thumbnail_url");
+                                
+                                    # サムネイルの登録
+                                    my ( $thumb_width, $thumb_height ) = imgsize( $thumbnail_path );
+                                    my $thumbnail_asset = MT->model( 'image' )->new;
+                                    $thumbnail_asset->label('Thumbnail of '.$asset->label);
+                                    $thumbnail_asset->file_path($thumbnail_path);
+                                    $thumbnail_asset->file_name($thumbnail_filename);
+                                    $thumbnail_asset->file_ext($thumbnail_ext);
+                                    $thumbnail_asset->mime_type( 'image/jpeg' );
+                                    $thumbnail_asset->blog_id($blog->id);
+                                    $thumbnail_asset->created_by($author->id);
+                                    $thumbnail_asset->modified_by($author->id);
+                                    $thumbnail_asset->url($thumbnail_url);
+                                    $thumbnail_asset->description('');
+                                    $thumbnail_asset->image_width($thumb_width);
+                                    $thumbnail_asset->image_height($thumb_height);
+                                    $thumbnail_asset->parent($asset->id); # 親の設定
+                                
+                                    unless ($thumbnail_asset->save) {
+                                        log_error("サムネイルのアイテム登録に失敗");
+                                    }
+                                    log_debug("サムネイルを登録しました id:".$asset->id."path:$thumbnail_path url:$thumbnail_url parent_id:".$asset->id);
                                 }
-                            }
-                        
-                            # アイテムの登録
-                            my ( $width, $height ) = imgsize( $file_path );
-                            my $asset = MT->model( 'image' )->new;
-                            # 情報セット
-                            $asset->label($entry->title);
-                            $asset->file_path($file_path);
-                            $asset->file_name($new_filename);
-                            $asset->file_ext($ref_image->{ext});
-                            $asset->mime_type( $ref_image->{type} );
-                            $asset->blog_id($blog->id);
-                            $asset->created_by($author->id);
-                            $asset->modified_by($author->id);
-                            $asset->url($url);
-                            $asset->description('');
-                            $asset->image_width($width);
-                            $asset->image_height($height);
-                            # アイテムの登録
-                            unless ($asset->save) {
-                                log_error("アイテムの登録に失敗");
-                                next;
-                            }
-
-                            # エントリと関連づけ
-                            my $obj_asset = MT->model( 'objectasset' )->new();
-                            $obj_asset->blog_id($blog->id);
-                            $obj_asset->asset_id($asset->id);
-                            $obj_asset->object_ds('entry');
-                            $obj_asset->object_id($entry->id);
-                            $obj_asset->save;
-                        
-                            log_debug("アイテムを登録しました id:".$asset->id."path:$file_path url:$url");
+                            } # 動画ここまで
+                            
                         }
-                    }           # 写真ここまで
-
-                    # 動画
-                    if (@$ref_movies && use_ffmpeg($blog->id)) {
-                        my $ffmpeg_path = get_system_setting('ffmpeg_path');
-                        log_debug("ムービー掲載が有効です。");
-                        log_debug("FFmpeg: $ffmpeg_path");
-                    
-
-                        # 添付写真の保存
-                        # ファイルマネージャのインスタンス生成
-                        my $fmgr = MT::FileMgr->new('Local');
-                        unless ($fmgr) {
-                            log_error(MT::FileMgr->errstr);
-                            next;
+                        # 記事テンプレートの適用
+                        my $old_entry = $entry->clone;
+                        my ($new_text, $tmpl_error) = $self->build_entry_text($entry);
+                        if ( defined($new_text) ) {
+                            utf8::decode($new_text) unless utf8::is_utf8($new_text);
+                            $entry->text($new_text);
+                        } else {
+                            log_error($tmpl_error);
+                            $entry->text($tmpl_error);
                         }
-                    
-                        my $now = time;
-                        my @t = MT::Util::offset_time_list($now, $blog);
-                        for (my $i=0; $i<@$ref_movies; $i++) {
-                            my $ref_movie = $ref_movies->[$i];
-                            # 新しいファイル名
-                            my $new_filename = sprintf("%d_%d_%d.flv", $entry->id, $now, $i);
-                            # ブログルート
-                            my $root_path = $blog->site_path; # サーバ内パス
-                            my $root_url = $blog->site_url;   # URL
-                            # 保存先
-                            my $relative_dir = "ketai_post_files/".($t[5]+1900).'/'.($t[4]+1)."/".($t[3])."/";
-                            my $relative_file_path = $relative_dir.$new_filename; # 相対パス
-                            my $file_path = File::Spec->catfile($root_path, $relative_file_path); # サーバ内パス
-                            my $dir = dirname($file_path); # ディレクトリ名
-                            my $url = $root_url;
-                            $url .= '/' if $url !~ m!/$!;
-                            $url .= $relative_file_path; # URL
-
-                            my $thumbnail_filename = sprintf("%d_%d_%d.jpg", $entry->id, $now, $i);
-                            my $relative_thumbnail_path = $relative_dir.$thumbnail_filename; # 相対パス
-                            my $thumbnail_path = File::Spec->catfile($root_path, $relative_thumbnail_path);
-                        
-                            log_debug("file_path: $file_path\nurl: $url");
-                        
-                            # アップロード先ディレクトリ生成
-                            unless($fmgr->exists($dir)) {
-                                unless ($fmgr->mkpath($dir)) {
-                                    log_error($fmgr->errstr);
-                                    next;
-                                }
-                            }
-
-                            # 変換
-                            my $temp_dir = get_system_setting('temp_dir');
-
-                            my($tmp_fh, $tmp_filename) = File::Temp::tempfile(
-                                'movie_XXXXXX',
-                                SUFFIX => ".@{[ $ref_movie->{ext} ]}",
-                                UNLINK => 1,
-                                DIR => $temp_dir
-                            );
-                            print $tmp_fh $ref_movie->{data};
-                            close($tmp_fh);
-                            my($tmpout_fh, $tmpout_filename) = File::Temp::tempfile(
-                                'movie_XXXXXX',
-                                SUFFIX => '.flv',
-                                UNLINK => 1,
-                                DIR => $temp_dir
-                            );
-                            close($tmpout_fh);
-                            my($tmppasslog_fh, $tmppasslog_filename) = File::Temp::tempfile(
-                                'passlog_XXXXXX',
-                                SUFFIX => '.txt',
-                                UNLINK => 1,
-                                DIR => $temp_dir
-                            );
-                            close($tmppasslog_fh);
-
-                            system("$ffmpeg_path -y -i $tmp_filename -an -pass 1 -passlogfile $tmppasslog_filename -vcodec flv -f flv -b 5M $tmpout_filename");
-                            system("$ffmpeg_path -y -i $tmp_filename -ar 44100 -acodec libmp3lame -pass 2 -passlogfile $tmppasslog_filename -vcodec flv -f flv -b 5M $tmpout_filename");
-
-                            my($tmpthumb_fh, $tmpthumb_filename) = File::Temp::tempfile(
-                                TEMPLATE => 'image_XXXXXX',
-                                SUFFIX => '.jpg',
-                                UNLINK => 1,
-                                DIR => $temp_dir
-                            );
-                            close($tmpthumb_fh);
-
-                            system("$ffmpeg_path -y -i $tmp_filename -f image2 -ss 1 -r 1 -an -deinterlace $tmpthumb_filename");
-                        
-                            # 保存
-                            my $bytes = $fmgr->put($tmpout_filename, $file_path, 'upload');
-                            unless (defined $bytes) {
-                                log_error($fmgr->errstr);
-                                next;
-                            }            
-                            log_debug($ref_movie->{filename}." を ".$file_path." に書き込みました。");
-                        
-                            # アイテムの登録
-                            my $asset = MT->model( 'video' )->new;
-                            # 情報セット
-                            $asset->label($entry->title);
-                            $asset->file_path($file_path);
-                            $asset->file_name($new_filename);
-                            $asset->file_ext($ref_movie->{ext});
-                            $asset->mime_type( $ref_movie->{type} );
-                            $asset->blog_id($blog->id);
-                            $asset->created_by($author->id);
-                            $asset->modified_by($author->id);
-                            $asset->url($url);
-                            $asset->description('');
-
-                            # アイテムの登録
-                            unless ($asset->save) {
-                                log_error("アイテムの登録に失敗");
-                                next;
-                            }
-
-                            # エントリと関連づけ
-                            my $obj_asset = MT->model( 'objectasset' )->new();
-                            $obj_asset->blog_id($blog->id);
-                            $obj_asset->asset_id($asset->id);
-                            $obj_asset->object_ds('entry');
-                            $obj_asset->object_id($entry->id);
-                            $obj_asset->save;
-                        
-                            log_debug("アイテムを登録しました id:".$asset->id."path:$file_path url:$url");
-                        
-                            $bytes = $fmgr->put($tmpthumb_filename, $thumbnail_path, 'upload');
-                            unless (defined $bytes) {
-                                log_error($fmgr->errstr);
-                                next;
-                            }            
-                            log_debug($ref_movie->{filename}." を ".$file_path." に書き込みました。");
-                        
-
-                            my ($thumbnail_basename, $thumbnail_dir, $thumbnail_ext) = fileparse($thumbnail_path, qr/\.[^.]*/);
-                            my $thumbnail_url = $root_url.File::Spec->abs2rel($thumbnail_path, $root_path);
-                            log_debug("サムネイルを作成しました。 path:$thumbnail_path url:$thumbnail_url");
-                        
-                            # サムネイルの登録
-                            my ( $thumb_width, $thumb_height ) = imgsize( $thumbnail_path );
-                            my $thumbnail_asset = MT->model( 'image' )->new;
-                            $thumbnail_asset->label('Thumbnail of '.$asset->label);
-                            $thumbnail_asset->file_path($thumbnail_path);
-                            $thumbnail_asset->file_name($thumbnail_filename);
-                            $thumbnail_asset->file_ext($thumbnail_ext);
-                            $thumbnail_asset->mime_type( 'image/jpeg' );
-                            $thumbnail_asset->blog_id($blog->id);
-                            $thumbnail_asset->created_by($author->id);
-                            $thumbnail_asset->modified_by($author->id);
-                            $thumbnail_asset->url($thumbnail_url);
-                            $thumbnail_asset->description('');
-                            $thumbnail_asset->image_width($thumb_width);
-                            $thumbnail_asset->image_height($thumb_height);
-                            $thumbnail_asset->parent($asset->id); # 親の設定
-                        
-                            unless ($thumbnail_asset->save) {
-                                log_error("サムネイルのアイテム登録に失敗");
-                            }
-                            log_debug("サムネイルを登録しました id:".$asset->id."path:$thumbnail_path url:$thumbnail_url parent_id:".$asset->id);
-                        }
-                    } # 動画ここまで
-                    
+                        $entry->save or die $entry->errstr;
+                        MT->run_callbacks( 'ketai_post_published', $app, $ref_data, $entry );
+                    }
                 }
-                # 記事テンプレートの適用
-                my $old_entry = $entry->clone;
-                my ($new_text, $tmpl_error) = $self->build_entry_text($entry);
-                if ( defined($new_text) ) {
-                    utf8::decode($new_text) unless utf8::is_utf8($new_text);
-                    $entry->text($new_text);
-                    $entry->save;
-                } else {
-                    log_error($tmpl_error);
-                    next;
-                }
-                MT->run_callbacks( 'ketai_post_published', $app, $ref_data, $entry );
-            } # end loop
-        }; # eval
-        log_error($@) if $@;
-
-        $pop3->Close();
+                $counter++;
+            }
+        };
+        $closure->();
     }
 
     foreach my $entry_id(@entry_ids) {
@@ -929,29 +949,25 @@ sub create_entry {
     $entry->text($text2);
     $entry->allow_comments($blog->allow_comments_default);
     $entry->allow_pings($blog->allow_pings_default);
-    if($entry->save) {
-        # 記事とカテゴリの関連付け
-        if($category) {
-            my $place = MT->model( 'placement' )->new;
-            $place->entry_id($entry->id);
-            $place->blog_id($entry->blog_id);
-            $place->category_id($category->id);
-            $place->is_primary(1);
-            $place->save;
-        }
-
-        log_info("'".$author->name."'がブログ記事'".$entry->title."'(ID:".$entry->id.")を追加しました。", {
-            author_id => $author->id,
-            blog_id => $blog->id,
-        });
-        log_debug($entry->permalink);
-
-        return $entry;
-    } else {
-        log_debug("投稿失敗");
+    $entry->save or die $entry->errstr;
+    
+    # 記事とカテゴリの関連付け
+    if($category) {
+        my $place = MT->model( 'placement' )->new;
+        $place->entry_id($entry->id);
+        $place->blog_id($entry->blog_id);
+        $place->category_id($category->id);
+        $place->is_primary(1);
+        $place->save;
     }
 
-    return;
+    log_info("'".$author->name."'がブログ記事'".$entry->title."'(ID:".$entry->id.")を追加しました。", {
+        author_id => $author->id,
+        blog_id => $blog->id,
+    });
+    log_debug($entry->permalink);
+
+    return $entry;
 }
 
 # 記事テンプレートの取得

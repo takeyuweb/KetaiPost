@@ -1,31 +1,4 @@
-<!--
-<mtapp:setting id="geo" label="GPS位置情報:">
-  <mtapp:setting id="use_latlng" label="地図表示:">
-    <mt:if name="sys_use_latlng" eq="2">
-      <input type="radio" id="use_latlng_2" name="sys_use_latlng" value="2" checked="checked" /><label for="use_latlng_2">する</label>&nbsp;
-      <input type="radio" id="use_latlng_1" name="sys_use_latlng" value="1" /><label for="use_latlng_1">しない</label><br />
-      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
-    </mt:if>
-    <mt:if name="sys_use_latlng" eq="1">
-      <input type="radio" id="use_latlng_2" name="sys_use_latlng" value="2" /><label for="use_latlng_2">する</label>&nbsp;
-      <input type="radio" id="use_latlng_1" name="sys_use_latlng" value="1" checked="checked" /><label for="use_latlng_1">しない</label><br />
-      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
-    </mt:if>
-  <mt:unless name="sys_use_latlng">
-      <input type="radio" id="use_latlng_2" name="sys_use_latlng" value="2" /><label for="use_latlng_2">する</label>&nbsp;
-      <input type="radio" id="use_latlng_1" name="sys_use_latlng" value="1" /><label for="use_latlng_1">しない</label><br />
-      「する」に設定すると、写真データに位置情報が埋め込まれている場合に地図を表示します。（オプションモジュール Image::ExifTool が必要です）
-    </mt:unless>
-  </mtapp:setting>
-  <mtapp:setting id="gmap_key" label="Google Map API Key:">
-    <input type="text" name="sys_gmap_key" value="<mt:var name="sys_gmap_key" encode_html="1" />" class="full-width" /><br />
-    地図の表示に使用します。
-  </mtapp:setting>
-  <mtapp:setting id="gmap_size" label="地図のサイズ:">
-    <input type="text" name="sys_gmap_width" value="<mt:var name="sys_gmap_width" encode_html="1" />" style="width: 50px;" /> × <input type="text" name="sys_gmap_height" value="<mt:var name="sys_gmap_height" encode_html="1" />" style="width: 50px;" />
-  </mtapp:setting>
-</mtapp:setting>
--->
+
 <mtapp:setting id="movie" label="ムービー:">
   <mtapp:setting id="use_ffmpeg" label="掲載:">
     <mt:if name="sys_use_ffmpeg" eq="2">
@@ -176,13 +149,4 @@
     <input type="radio" id="use_debuglog_0" name="sys_use_debuglog" value="0" checked="checked" /><label for="use_debuglog_0">しない</label>
   </mt:if>
 </mtapp:setting>
-<mtapp:setting id="disable_delete_flag" label="受信後サーバから削除:">
-  <mt:if name="sys_disable_delete_flag">
-    <input type="radio" id="disable_delete_flag_0" name="sys_disable_delete_flag" value="0" /><label for="disable_delete_flag_0">する</label>&nbsp;
-    <input type="radio" id="disable_delete_flag_1" name="sys_disable_delete_flag" value="1" checked="checked" /><label for="disable_delete_flag_1">しない</label>
-  <mt:else>
-    <input type="radio" id="disable_delete_flag_0" name="sys_disable_delete_flag" value="0" checked="checked" /><label for="disable_delete_flag_0">する</label>&nbsp;
-    <input type="radio" id="disable_delete_flag_1" name="sys_disable_delete_flag" value="1" /><label for="disable_delete_flag_1">しない</label>
-  </mt:if>
-  <br />「しない」場合、メールが削除されないので繰り返し投稿されます。（デバッグ用）
-</mtapp:setting>
+

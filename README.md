@@ -4,12 +4,15 @@
 * Copyright:: Copyright 2011 Yuichi Takeuchi
 * License:: GPL v2
 
-Movable Type (MTOS) 5.1 にメール投稿機能を追加するためのプラグインです。
+Movable Type (MTOS) 5.1 以降にメール投稿機能を追加するためのプラグインです。
 類似の機能をもつプラグインはすでに存在しますがライセンス上の問題により自作しましたので、せっかくなので公開します。
 自分で使う上で欲しいなと思った機能を割と節操なく実装する一方で、一般的でも私が不要と思った機能は付けていません。
 
 バージョン 1.0.0 にあわせて、パーミッションなどセキュリティ面を少し強化しました。（私が複数ユーザーで使いたかったので。）
 
+## 利用イメージ
+
+![KetaiPost](https://raw.githubusercontent.com/wiki/takeyuweb/KetaiPost/blog.png)
 
 ## 特徴
 * *携帯メール* でブログ記事の投稿が行えるようになります。
@@ -59,7 +62,7 @@ Movable Type (MTOS) 5.1 にメール投稿機能を追加するためのプラ�
   * KetaiPostバージョン 1.0.0 より、MT5.0系では動きません。5.0系をお使いの方は 0.4.4 をお使い下さい。
 * Perl 5.8.1 以上で以下のモジュールがインストールされているサーバーであること。（ものによって`extlib`への配置でOK）
   * `Mail::POP3Client`
-  * `MIME-tools`
+  * `MIME-tools`（`MIME::Parser`）
   また、POP3 over SSL (Gmailなど)のメールボックスを使用する場合は、次も必要です。
   * `IO::Socket::SSL`
   EXIF情報を使った写真の回転や位置情報の表示を行う場合は、次も必要です。
@@ -69,7 +72,7 @@ Movable Type (MTOS) 5.1 にメール投稿機能を追加するためのプラ�
   * `Encode::JP::Emoji` ( http://search.cpan.org/~kawasaki/Encode-JP-Emoji-0.05/ )
   * `Encode::JP::Emoji::FB_EMOJI_TYPECAST` ( http://search.cpan.org/~kawasaki/Encode-JP-Emoji-FB_EMOJI_TYPECAST-0.05/ )
 
-  なお、 Mail::POP3Client 及び MIME-tools 、Encode::JP::Emoji については、extlib に配置することで動作します。（たぶん）
+  なお、 Mail::POP3Client 及び  MIME-tools（MIME::Parser） 、Encode::JP::Emoji については、extlib に配置することで動作します。（たぶん）
   * `extlib/Mail/POP3Client.pm`
   * `extlib/MIME/*`	
   * `extlib/Encode/JP/Emoji.pm`
@@ -78,10 +81,29 @@ Movable Type (MTOS) 5.1 にメール投稿機能を追加するためのプラ�
   * 共用レンタルサーバでの利用はいろいろな理由で難しいです。これだけで理解できない人は諦めましょう。
   * 持っている端末（SO503i/Xperia SO-01B）でしかテストしていません。
 
+### 依存モジュールのバージョンについて
 
-## 動くっぽい共用レンタルサーバ（報告のあったもの）
+入れてるのに動かない！そんなときはモジュールのバージョンを合わせてみて下さい。以下のバージョンは開発の際、動作確認に使用したものになります。
+
+|モジュール|バージョン|
+|----------|----------|
+|Mail::POP3Client|2.19|
+|MIME::Parser|5.505|
+|File::Temp|0.22|
+|IO::Socket::SSL|1.58|
+|Encode::MIME::Header::ISO_2022_JP|1.03|
+|Image::ExifTool|8.50|
+|Image::Magick|6.5.4|
+|Encode::JP::Emoji|0.60|
+|Encode::JP::Emoji::FB_EMOJI_TYPECAST|0.05|
+|Text::Xatena|0.18|
+
+### 動くっぽい共用レンタルサーバ（報告のあったもの）
 * さくらのレンタルサーバ
   * `Mail::POP3Client`がありませんが、`MT_DIR/extlib/Mail/POP3Client.pm`を配置すれば動くようです。
+* Movable Type クラウド版
+  * `Mail::POP3Client`と`MIME-tools`を`/plugins/KetaiPost/extlib`に設置すれば動くようです。
+  *  MTクラウドでKetaiPostを使ってメール投稿を使う手順まとめ（Gmail） http://takeyuweb.hatenablog.com/entry/2015/03/04/004741
 
 
 ## しくみ
@@ -161,7 +183,7 @@ cron 自体は適切に動くことがわかっている場合や、送信元・
 
 ## 有償サポート
 ご自身で設置・設定できない方向けに、設置代行サービスもございますのでお気軽にお問い合わせください。
-詳しくは http://takeyu-web.com/download/2010/10/post-1.html
+詳しくは http://takeyu-web.com/
 
 
 ## ご注意

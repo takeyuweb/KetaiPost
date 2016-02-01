@@ -2,7 +2,7 @@ l10n_class: KetaiPost::L10N
 id: KetaiPost
 key: ketaipost
 name: KetaiPost
-version: 1.3.0
+version: 1.3.1
 author_name: Yuichi Takeuchi
 author_link: http://takeyu-web.com/
 doc_link: https://github.com/takeyuweb/KetaiPost/

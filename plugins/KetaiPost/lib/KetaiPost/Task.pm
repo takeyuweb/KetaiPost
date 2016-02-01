@@ -652,9 +652,9 @@ sub process {
 
     foreach my $entry_id(@entry_ids) {
         my $obj = MT->model( 'entry' )->load( $entry_id );
+        $self->run_callbacks( $obj );
         $self->rebuild_entry_page( $obj );
         $self->send_entry_notify( $obj );
-        $self->run_callbacks( $obj );
     }
 
     1;
@@ -1172,8 +1172,7 @@ sub run_callbacks {
     my $self = shift;
     my ( $entry ) = @_;
     my $app = MT->instance;
-    #MT->run_callbacks('cms_post_save.entry', $app, $entry);
-    MT->run_callbacks( 'scheduled_post_published', $app, $entry );
+    $app->run_callbacks( 'scheduled_post_published', $app, $entry );
 }
 
 1;
